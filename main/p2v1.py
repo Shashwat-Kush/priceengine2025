@@ -5,7 +5,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 # --- 1. Load the Trained Model (Pipeline 1) ---
-def load_model(filename='demand_forecast_model.pkl'):
+def load_model(filename='main/models/demand_forecast_model.pkl'):
     """
     Loads the demand forecasting model that was trained in Pipeline 1.
     
@@ -22,7 +22,7 @@ def load_model(filename='demand_forecast_model.pkl'):
         return model
     except FileNotFoundError:
         print(f"Error: Model file '{filename}' not found.")
-        print("Please ensure 'demand_forecast_model.pkl' is in the same directory.")
+        print("Please ensure 'main/models/demand_forecast_model.pkl' is in the same directory.")
         return None
 
 # --- 2. The Core Optimization Function ---

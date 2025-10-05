@@ -26,7 +26,7 @@ demand_model = None
 @app.on_event("startup")
 def startup_event():
     global demand_model
-    demand_model = load_model('demand_forecast_model.pkl')
+    demand_model = load_model('main/models/demand_forecast_model.pkl')
     if demand_model:
         print("Demand forecast model loaded and ready.")
     else:

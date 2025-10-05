@@ -32,7 +32,7 @@ def load_data(filepath):
         return df
     except FileNotFoundError:
         print(f"Error: The file was not found at {filepath}")
-        print("Please download the 'BigMart Sales Data' from the provided Kaggle link and place 'Train.csv' in the same directory as this script.")
+        print("Please download the 'BigMart Sales Data' from the provided Kaggle link and place it in 'datasets/BigMart Sales Data/Train.csv'.")
         return None
 
 # --- 2. Data Preprocessing and Feature Engineering ---
@@ -150,10 +150,10 @@ def save_pipeline(pipeline, filename):
 
 if __name__ == '__main__':
     # Define the file path for the dataset
-    # IMPORTANT: Download the data from the link below and place Train.csv in the same folder:
+    # IMPORTANT: Download the data from the link below and place Train.csv in 'datasets/BigMart Sales Data/Train.csv':
     # https://www.kaggle.com/datasets/brijbhushannanda1979/bigmart-sales-data?resource=download
-    DATA_FILEPATH = 'main/Train.csv'
-    MODEL_FILENAME = 'main/demand_forecast_model.pkl'
+    DATA_FILEPATH = 'datasets/BigMart Sales Data/Train.csv'
+    MODEL_FILENAME = 'main/models/demand_forecast_model.pkl'
     
     # Run the full pipeline
     df = load_data(DATA_FILEPATH)

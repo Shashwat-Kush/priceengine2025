@@ -91,7 +91,7 @@ def find_optimal_price_v2(model, model_columns, product_df, cost_percentage=0.6,
     return result
 
 if __name__ == '__main__':
-    MODEL_FILENAME = 'demand_forecast_model_v2.pkl'
+    MODEL_FILENAME = 'main/models/demand_forecast_model_v2.pkl'
     
     # Load the new V2 model and the required column list
     model, model_columns = load_model_v2(MODEL_FILENAME)

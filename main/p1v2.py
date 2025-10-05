@@ -133,9 +133,9 @@ def save_model(model, columns, filename):
     print("Model saved successfully.")
 
 if __name__ == '__main__':
-    BIGMART_FILEPATH = 'Train.csv'
-    DIWALI_FILEPATH = 'Diwali Sales Data.csv'
-    MODEL_FILENAME = 'demand_forecast_model_v2.pkl'
+    BIGMART_FILEPATH = 'datasets/BigMart Sales Data/Train.csv'
+    DIWALI_FILEPATH = 'datasets/DiwaliSales/Diwali Sales Data.csv'
+    MODEL_FILENAME = 'main/models/demand_forecast_model_v2.pkl'
     
     df_bigmart, df_diwali = load_data(BIGMART_FILEPATH, DIWALI_FILEPATH)
     
