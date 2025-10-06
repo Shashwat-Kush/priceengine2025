@@ -21,7 +21,8 @@ import pandas as pd
 # (e.g., CSVs or JSON). For simplicity in this combined script, we will define
 # them directly as Python dictionaries.
 
-print("--- Step 1: Loading Pre-Calculated Model Components ---")
+if __name__ == "__main__":
+    print("--- Step 1: Loading Pre-Calculated Model Components ---")
 
 # Component 1: Seasonality Index (from calculate_seasonality_index.py)
 SEASONALITY_INDEX = {
@@ -29,7 +30,8 @@ SEASONALITY_INDEX = {
     'May': 1.309, 'June': 1.350, 'July': 1.436, 'August': 1.298,
     'September': 1.134, 'October': 1.127, 'November': 1.157, 'December': 0.878
 }
-print(" -> Seasonality Index loaded for all 12 months.")
+if __name__ == "__main__":
+    print(" -> Seasonality Index loaded for all 12 months.")
 
 # Component 2: Outlet Influence Factor (from calculate_outlet_factor.py)
 OUTLET_FACTORS = {
@@ -37,7 +39,8 @@ OUTLET_FACTORS = {
     'OUT019': 0.376, 'OUT027': 1.631, 'OUT035': 1.109, 'OUT045': 1.013,
     'OUT046': 1.107, 'OUT049': 1.042
 }
-print(" -> Outlet Influence Factors loaded for all 10 outlets.")
+if __name__ == "__main__":
+    print(" -> Outlet Influence Factors loaded for all 10 outlets.")
 
 # Component 3: Baseline Price-Demand Model Parameters (from calculate_baseline_model.py)
 # These values are for our hero product 'DRC01'.
@@ -45,14 +48,16 @@ BASELINE_MODEL_PARAMS = {
     'a_intercept': 23.3256,
     'b_slope': 0.0433
 }
-print(f" -> Baseline Model (Demand = a - b*Price) loaded: a={BASELINE_MODEL_PARAMS['a_intercept']:.2f}, b={BASELINE_MODEL_PARAMS['b_slope']:.2f}\n")
+if __name__ == "__main__":
+    print(f" -> Baseline Model (Demand = a - b*Price) loaded: a={BASELINE_MODEL_PARAMS['a_intercept']:.2f}, b={BASELINE_MODEL_PARAMS['b_slope']:.2f}\n")
 
 
 # ---
 # ### Step 2: The Final Forecasting Function
 # ---
 # 
-print("--- Step 2: Defining the Core Forecasting Function ---")
+if __name__ == "__main__":
+    print("--- Step 2: Defining the Core Forecasting Function ---")
 
 def predict_demand(price: float, month: str, outlet_id: str):
     """
@@ -101,37 +106,39 @@ def predict_demand(price: float, month: str, outlet_id: str):
 
     return calculation_steps
 
-print("Forecasting function `predict_demand` is ready.\n")
+if __name__ == "__main__":
+    print("Forecasting function `predict_demand` is ready.\n")
 
 
 # ---
 # ### Step 3: Example Usage
 # ---
-print("--- Step 3: Running an Example Forecast ---")
+if __name__ == "__main__":
+    print("--- Step 3: Running an Example Forecast ---")
 
-# Define our inputs for a sample scenario
-input_price = 150.00
-input_month = 'June'
-input_outlet = 'OUT027' # This is our highest-performing outlet
+    # Define our inputs for a sample scenario
+    input_price = 150.00
+    input_month = 'June'
+    input_outlet = 'OUT027' # This is our highest-performing outlet
 
-print(f"Scenario: Predicting demand for a price of ₹{input_price:.2f} in {input_month} at outlet {input_outlet}.\n")
+    print(f"Scenario: Predicting demand for a price of ₹{input_price:.2f} in {input_month} at outlet {input_outlet}.\n")
 
-# Call the function
-prediction = predict_demand(price=input_price, month=input_month, outlet_id=input_outlet)
+    # Call the function
+    prediction = predict_demand(price=input_price, month=input_month, outlet_id=input_outlet)
 
-# Display the results in a clear, step-by-step manner
-if prediction:
-    print("--- Forecast Breakdown ---")
-    print(f"1. Baseline Demand at ₹{prediction['input_price']:.2f}: {prediction['baseline_demand']:.2f} units")
-    print(f"   (Calculated from: {BASELINE_MODEL_PARAMS['a_intercept']:.2f} - {BASELINE_MODEL_PARAMS['b_slope']:.2f} * {prediction['input_price']:.2f})")
-    
-    print(f"\n2. Applying {prediction['input_month']}'s Seasonality Index: {prediction['seasonality_index']:.3f}")
-    demand_after_seasonality = prediction['baseline_demand'] * prediction['seasonality_index']
-    print(f"   Demand adjusted for season: {demand_after_seasonality:.2f} units")
-    
-    print(f"\n3. Applying {prediction['input_outlet']}'s Influence Factor: {prediction['outlet_factor']:.3f}")
-    print(f"   Demand adjusted for outlet performance: {prediction['final_predicted_demand']:.2f} units")
-    
-    print("\n-------------------------------------------")
-    print(f"  Final Predicted Demand: {round(prediction['final_predicted_demand'])} units")
-    print("-------------------------------------------")
+    # Display the results in a clear, step-by-step manner
+    if prediction:
+        print("--- Forecast Breakdown ---")
+        print(f"1. Baseline Demand at ₹{prediction['input_price']:.2f}: {prediction['baseline_demand']:.2f} units")
+        print(f"   (Calculated from: {BASELINE_MODEL_PARAMS['a_intercept']:.2f} - {BASELINE_MODEL_PARAMS['b_slope']:.2f} * {prediction['input_price']:.2f})")
+        
+        print(f"\n2. Applying {prediction['input_month']}'s Seasonality Index: {prediction['seasonality_index']:.3f}")
+        demand_after_seasonality = prediction['baseline_demand'] * prediction['seasonality_index']
+        print(f"   Demand adjusted for season: {demand_after_seasonality:.2f} units")
+        
+        print(f"\n3. Applying {prediction['input_outlet']}'s Influence Factor: {prediction['outlet_factor']:.3f}")
+        print(f"   Demand adjusted for outlet performance: {prediction['final_predicted_demand']:.2f} units")
+        
+        print("\n-------------------------------------------")
+        print(f"  Final Predicted Demand: {round(prediction['final_predicted_demand'])} units")
+        print("-------------------------------------------")
