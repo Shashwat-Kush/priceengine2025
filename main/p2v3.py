@@ -106,15 +106,15 @@ def print_strategy(rows: List[Dict]):
     for row in data:
         print(fmt_row(row))
 
+def get_best_strategy(prices: List[float], months: List[str] = list(SEASONALITY_INDEX.keys()), outlets: List[str] = list(OUTLET_FACTORS.keys())):
+    rows, strategy = optimize_prices(months, outlets, prices)
+    return rows, strategy
 
 if __name__ == "__main__":
-    # Hardcoded candidate sets (can be widened later)
-    months = list(SEASONALITY_INDEX.keys())  # all 12 months from p1v3
-    outlets = list(OUTLET_FACTORS.keys())    # all outlets from p1v3
     # Candidate prices (₹): choose a reasonable grid for now
     prices = [150, 175, 200, 225, 250, 275, 300, 325, 350, 375, 400]
 
-    rows, strategy = optimize_prices(months, outlets, prices)
+    rows, strategy = get_best_strategy(prices)
     print_strategy(rows)
 
     # Also print a compact summary per month (optional)
