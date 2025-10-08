@@ -1,8 +1,8 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Layout from "./components/Layout";
+// import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
-import Analytics from "./pages/Analytics";
-import Settings from "./pages/Settings";
+// import Analytics from "./pages/Analytics";
+// import Settings from "./pages/Settings";
 
 function App() {
 	return (
