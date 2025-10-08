@@ -10,7 +10,11 @@ Output: A concise pricing strategy table.
 
 from typing import Dict, List, Tuple
 
-from p1v3 import predict_demand, SEASONALITY_INDEX, OUTLET_FACTORS
+# Handle both standalone and package imports
+try:
+    from .p1v3 import predict_demand, SEASONALITY_INDEX, OUTLET_FACTORS # for package use - in app.py
+except ImportError:
+    from p1v3 import predict_demand, SEASONALITY_INDEX, OUTLET_FACTORS  # for standalone script use - in terminal
 
 
 def optimize_prices(

@@ -8,7 +8,7 @@ import warnings
 # We will reuse the functions from your price_optimizer script.
 # For a real project, you might put these into a shared 'utils.py' or 'engine.py' file.
 # from p2v1 import load_model, find_optimal_price
-from p2v3 import get_best_strategy
+from v3.p2v3 import get_best_strategy
 
 warnings.filterwarnings('ignore')
 
