@@ -14,6 +14,8 @@ import pandas as pd
 import numpy as np
 from sklearn.linear_model import LinearRegression
 import io
+import warnings
+warnings.filterwarnings('ignore')
 
 # ---
 # ### Step 1: Extract Patterns from REAL Data Sources (Focused Logic)
