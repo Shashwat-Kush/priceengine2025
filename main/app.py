@@ -2,19 +2,19 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import pandas as pd
+# import pandas as pd
 import warnings
 
 # --- Import your existing logic ---
 # We will reuse the functions from your price_optimizer script.
 # For a real project, you might put these into a shared 'utils.py' or 'engine.py' file.
 # from p2v1 import load_model, find_optimal_price
-from p2v3 import get_best_strategy
+from v3.p2v3 import get_best_strategy
 
 warnings.filterwarnings('ignore')
 
 try:
-    from main import run_training_pipeline, predict_demand, MODEL_FILENAME
+    from p1v4 import run_training_pipeline, predict_demand, MODEL_FILENAME
 except ImportError:
     print("CRITICAL ERROR: Make sure 'main.py' and 'p1v4_utils.py' are in the same directory as 'app.py'.")
     exit()
