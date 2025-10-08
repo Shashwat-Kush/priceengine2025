@@ -1,4 +1,14 @@
 import { useMemo, useState } from "react";
+import {
+	LineChart,
+	Line,
+	XAxis,
+	YAxis,
+	CartesianGrid,
+	Tooltip,
+	Legend,
+	ResponsiveContainer,
+} from "recharts";
 
 const DEFAULT_PRICES = [
 	200, 210, 220, 230, 240, 250, 260, 270, 280, 290, 300, 310, 320,
@@ -9,6 +19,8 @@ function Dashboard() {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState("");
 	const [strategy, setStrategy] = useState(null);
+	const [detailedAnalysis, setDetailedAnalysis] = useState(null);
+	const [modalData, setModalData] = useState(null);
 
 	const parsedPrices = useMemo(() => {
 		return priceInput
@@ -23,6 +35,7 @@ function Dashboard() {
 		setLoading(true);
 		setError("");
 		setStrategy(null);
+		setDetailedAnalysis(null);
 		try {
 			const res = await fetch(
 				"http://127.0.0.1:8080/v1/optimize-price/",
@@ -34,14 +47,35 @@ function Dashboard() {
 			);
 			if (!res.ok) throw new Error(`Request failed (${res.status})`);
 			const data = await res.json();
-			// Expected shape: { status, input_product_details, optimization_results }
+			// Expected shape: { status, input_product_details, optimization_results, detailed_analysis }
 			setStrategy(data.optimization_results || null);
+			setDetailedAnalysis(data.detailed_analysis || null);
 		} catch (e) {
 			setError(e.message || "Something went wrong");
 		} finally {
 			setLoading(false);
 		}
 	};
+
+	const handleCellClick = (month, outletId) => {
+		if (!detailedAnalysis || !detailedAnalysis[month]) return;
+
+		// Filter data for this specific outlet
+		const outletData = detailedAnalysis[month].filter(
+			(item) => item.Outlet_ID === outletId
+		);
+
+		if (outletData.length > 0) {
+			setModalData({
+				month,
+				outletId,
+				data: outletData,
+				strategy: strategy[month][outletId],
+			});
+		}
+	};
+
+	const closeModal = () => setModalData(null);
 
 	return (
 		<div style={styles.page}>
@@ -78,12 +112,27 @@ function Dashboard() {
 				{error && <p style={styles.error}>Error: {error}</p>}
 			</div>
 
-			{strategy && <StrategyTable strategy={strategy} />}
+			{strategy && (
+				<StrategyTable
+					strategy={strategy}
+					onCellClick={handleCellClick}
+				/>
+			)}
+
+			{modalData && (
+				<ChartModal
+					month={modalData.month}
+					outletId={modalData.outletId}
+					data={modalData.data}
+					strategy={modalData.strategy}
+					onClose={closeModal}
+				/>
+			)}
 		</div>
 	);
 }
 
-function StrategyTable({ strategy }) {
+function StrategyTable({ strategy, onCellClick }) {
 	// strategy is a nested object: { [month]: { [outlet]: { recommended_price, expected_demand_units, expected_total_profit } } }
 	const months = Object.keys(strategy);
 	const outlets = Array.from(
@@ -122,6 +171,9 @@ function StrategyTable({ strategy }) {
 											<PriceCell
 												info={info}
 												formatMoney={formatMoney}
+												onClick={() =>
+													onCellClick(m, o)
+												}
 											/>
 										</td>
 									);
@@ -131,12 +183,15 @@ function StrategyTable({ strategy }) {
 					</tbody>
 				</table>
 			</div>
-			<p style={styles.note}>Tip: Hover a cell to view all details.</p>
+			<p style={styles.note}>
+				Tip: Hover a cell to view details. Click to see price analysis
+				chart.
+			</p>
 		</div>
 	);
 }
 
-function PriceCell({ info, formatMoney }) {
+function PriceCell({ info, formatMoney, onClick }) {
 	// Normalize shape: number or object
 	const isObj = typeof info === "object" && info !== null;
 	const price = isObj
@@ -157,9 +212,10 @@ function PriceCell({ info, formatMoney }) {
 
 	return (
 		<div
-			style={styles.tooltipContainer}
+			style={{ ...styles.tooltipContainer, ...styles.clickableCell }}
 			onMouseEnter={() => setShow(true)}
 			onMouseLeave={() => setShow(false)}
+			onClick={onClick}
 		>
 			<div>{price != null ? formatMoney(price) : "–"}</div>
 			{demand != null && profit != null && (
@@ -201,6 +257,180 @@ function PriceCell({ info, formatMoney }) {
 					)}
 				</div>
 			)}
+		</div>
+	);
+}
+
+function ChartModal({ month, outletId, data, strategy, onClose }) {
+	const formatMoney = (n) => `₹${Number(n).toFixed(2)}`;
+
+	// Sort data by price for proper chart rendering
+	const sortedData = [...data].sort((a, b) => a.Price - b.Price);
+
+	// Format data for Recharts
+	const chartData = sortedData.map((d) => ({
+		price: d.Price,
+		demand: Math.round(d.Predicted_Demand),
+		profit: Math.round(d.Total_Profit),
+		revenue: Math.round(d.Revenue),
+	}));
+
+	// Custom tooltip for the chart
+	const CustomTooltip = ({ active, payload }) => {
+		if (active && payload && payload.length) {
+			return (
+				<div style={styles.chartTooltip}>
+					<p style={{ margin: 0, marginBottom: 4, fontWeight: 600 }}>
+						Price: ₹{payload[0].payload.price}
+					</p>
+					<p style={{ margin: 0, color: "#4f7cff", fontSize: 13 }}>
+						Demand: {payload[0].payload.demand} units
+					</p>
+					<p style={{ margin: 0, color: "#ff6b9d", fontSize: 13 }}>
+						Profit: ₹{payload[0].payload.profit.toLocaleString()}
+					</p>
+				</div>
+			);
+		}
+		return null;
+	};
+
+	return (
+		<div style={styles.modalOverlay} onClick={onClose}>
+			<div
+				style={styles.modalContent}
+				onClick={(e) => e.stopPropagation()}
+			>
+				<div style={styles.modalHeader}>
+					<div>
+						<h2 style={styles.modalTitle}>
+							Price Analysis: {outletId}
+						</h2>
+						<p style={styles.modalSubtitle}>
+							{month} - Recommended Price:{" "}
+							{formatMoney(strategy.recommended_price)}
+						</p>
+					</div>
+					<button style={styles.closeButton} onClick={onClose}>
+						✕
+					</button>
+				</div>
+				<div style={styles.chartContainer}>
+					<ResponsiveContainer width="100%" height={400}>
+						<LineChart
+							data={chartData}
+							margin={{
+								top: 20,
+								right: 30,
+								left: 20,
+								bottom: 20,
+							}}
+						>
+							<CartesianGrid
+								strokeDasharray="3 3"
+								stroke="#263557"
+							/>
+							<XAxis
+								dataKey="price"
+								stroke="#9fb2d9"
+								tick={{ fill: "#9fb2d9" }}
+								label={{
+									value: "Price (₹)",
+									position: "insideBottom",
+									offset: -10,
+									fill: "#c6d3f5",
+								}}
+								tickFormatter={(value) => `₹${value}`}
+							/>
+							<YAxis
+								yAxisId="left"
+								stroke="#4f7cff"
+								tick={{ fill: "#4f7cff" }}
+								label={{
+									value: "Demand (units)",
+									angle: -90,
+									position: "insideLeft",
+									fill: "#4f7cff",
+								}}
+							/>
+							<YAxis
+								yAxisId="right"
+								orientation="right"
+								stroke="#ff6b9d"
+								tick={{ fill: "#ff6b9d" }}
+								label={{
+									value: "Total Profit (₹)",
+									angle: 90,
+									position: "insideRight",
+									fill: "#ff6b9d",
+								}}
+								tickFormatter={(value) =>
+									`₹${(value / 1000).toFixed(1)}k`
+								}
+							/>
+							<Tooltip content={<CustomTooltip />} />
+							<Legend
+								wrapperStyle={{ paddingTop: "20px" }}
+								iconType="line"
+							/>
+							<Line
+								yAxisId="left"
+								type="monotone"
+								dataKey="demand"
+								stroke="#4f7cff"
+								strokeWidth={3}
+								dot={{ fill: "#4f7cff", r: 5 }}
+								activeDot={{ r: 7 }}
+								name="Demand"
+							/>
+							<Line
+								yAxisId="right"
+								type="monotone"
+								dataKey="profit"
+								stroke="#ff6b9d"
+								strokeWidth={3}
+								dot={{ fill: "#ff6b9d", r: 5 }}
+								activeDot={{ r: 7 }}
+								name="Total Profit"
+							/>
+						</LineChart>
+					</ResponsiveContainer>
+				</div>{" "}
+				<div style={styles.dataTable}>
+					<table style={styles.table}>
+						<thead>
+							<tr>
+								<th style={styles.th}>Price</th>
+								<th style={styles.th}>Demand</th>
+								<th style={styles.th}>Revenue</th>
+								<th style={styles.th}>Profit</th>
+								<th style={styles.th}>Margin</th>
+							</tr>
+						</thead>
+						<tbody>
+							{sortedData.map((row) => (
+								<tr key={row.Price}>
+									<td style={styles.td}>
+										{formatMoney(row.Price)}
+									</td>
+									<td style={styles.td}>
+										{Math.round(row.Predicted_Demand)}
+									</td>
+									<td style={styles.td}>
+										{formatMoney(row.Revenue)}
+									</td>
+									<td style={styles.td}>
+										{formatMoney(row.Total_Profit)}
+									</td>
+									<td style={styles.td}>
+										{row["Profit_Margin_%"]?.toFixed(1)}%
+									</td>
+								</tr>
+							))}
+						</tbody>
+					</table>
+				</div>
+			</div>
 		</div>
 	);
 }
@@ -293,6 +523,82 @@ const styles = {
 		fontSize: 12,
 		padding: "4px 0",
 		borderBottom: "1px dashed #263557",
+	},
+	clickableCell: {
+		cursor: "pointer",
+		transition: "background-color 0.2s",
+	},
+	modalOverlay: {
+		position: "fixed",
+		top: 0,
+		left: 0,
+		right: 0,
+		bottom: 0,
+		background: "rgba(0, 0, 0, 0.7)",
+		display: "flex",
+		alignItems: "center",
+		justifyContent: "center",
+		zIndex: 1000,
+		padding: "20px",
+	},
+	modalContent: {
+		background: "#121a2a",
+		border: "1px solid #1f2a44",
+		borderRadius: 16,
+		maxWidth: "900px",
+		width: "100%",
+		maxHeight: "90vh",
+		overflow: "auto",
+		boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
+	},
+	modalHeader: {
+		display: "flex",
+		alignItems: "center",
+		justifyContent: "space-between",
+		padding: "24px",
+		borderBottom: "1px solid #1f2a44",
+	},
+	modalTitle: {
+		fontSize: 22,
+		margin: 0,
+		color: "#e9eefc",
+	},
+	modalSubtitle: {
+		fontSize: 14,
+		margin: "4px 0 0 0",
+		color: "#9fb2d9",
+	},
+	closeButton: {
+		background: "transparent",
+		border: "1px solid #263557",
+		color: "#9fb2d9",
+		fontSize: 24,
+		width: 40,
+		height: 40,
+		borderRadius: 8,
+		cursor: "pointer",
+		display: "flex",
+		alignItems: "center",
+		justifyContent: "center",
+		transition: "all 0.2s",
+	},
+	chartContainer: {
+		padding: "24px",
+		background: "#0e1524",
+		borderRadius: 8,
+		margin: "0 24px 24px 24px",
+	},
+	chartTooltip: {
+		background: "#0e1524",
+		border: "1px solid #263557",
+		borderRadius: 8,
+		padding: 12,
+		color: "#e9eefc",
+	},
+	dataTable: {
+		padding: "0 24px 24px 24px",
+		maxHeight: "300px",
+		overflow: "auto",
 	},
 };
 
