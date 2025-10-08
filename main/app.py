@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import pandas as pd
 import warnings
@@ -16,6 +17,18 @@ app = FastAPI(
     title="AI-Driven Price Optimization Engine API",
     description="An API to find the optimal price for products based on a demand forecast model.",
     version="1.0.0"
+)
+
+# Allow frontend (React dev server) to call this API during development
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # --- 2. Load the model during startup ---
