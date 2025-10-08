@@ -1,7 +1,8 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import pandas as pd
+# import pandas as pd
 import warnings
 
 # --- Import your existing logic ---
@@ -11,6 +12,12 @@ import warnings
 from v3.p2v3 import get_best_strategy
 
 warnings.filterwarnings('ignore')
+
+try:
+    from p1v4 import run_training_pipeline, predict_demand, MODEL_FILENAME
+except ImportError:
+    print("CRITICAL ERROR: Make sure 'main.py' and 'p1v4_utils.py' are in the same directory as 'app.py'.")
+    exit()
 
 # --- 1. Initialize the FastAPI App ---
 app = FastAPI(
@@ -44,6 +51,30 @@ app.add_middleware(
 #         print("Demand forecast model loaded and ready.")
 #     else:
 #         print("CRITICAL ERROR: Demand forecast model could not be loaded.")
+
+
+@app.on_event("startup")
+def startup_event():
+    """
+    FastAPI startup event.
+    Checks if a model file exists. If not, it runs the full training pipeline.
+    """
+    print("--- Server is starting up... ---")
+    print("--- Checking for existing model ---")
+
+    if os.path.exists(MODEL_FILENAME):
+        print(f"Model file '{MODEL_FILENAME}' found. Application is ready to serve predictions.")
+    else:
+        print(f"WARNING: Model file '{MODEL_FILENAME}' not found.")
+        print("--> Triggering the one-time training pipeline now.")
+        print("--> NOTE: This may take a minute or two. The server will be ready once training is complete.")
+        try:
+            # This is the function call that runs the entire training process
+            run_training_pipeline()
+            print(f"--> SUCCESS: Training complete. Model file '{MODEL_FILENAME}' has been created.")
+        except Exception as e:
+            print(f"CRITICAL ERROR during startup training: {e}")
+            print("--> The server will start, but the prediction endpoint will fail until a model is successfully trained.")
 
 @app.get("/")
 def read_root():
