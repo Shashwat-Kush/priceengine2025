@@ -94,6 +94,8 @@ def get_best_strategy(
 	results: Dict[str, List[dict]] = {m: [] for m in MONTHS}
 	strategy: Dict[str, Dict[str, dict]] = {m: {} for m in MONTHS}
 	status_by_month: Dict[str, dict] = {m: {"feasible": True, "message": "ok"} for m in MONTHS}
+	edge_summary_by_month: Dict[str, dict] = {m: {"increasing_high": 0, "increasing_low": 0, "outlets_high": [], "outlets_low": []} for m in MONTHS}
+	last_range_by_month: Dict[str, dict] = {m: {"lo": None, "hi": None} for m in MONTHS}
 
 	for month in MONTHS:
 		lo, hi = float(price_min), float(price_max)
@@ -151,8 +153,18 @@ def get_best_strategy(
 				# No best prices identified; retain current interval
 				pass
 
+		# Remember final refined range for this month (for UX hints)
+		last_range_by_month[month] = {"lo": float(lo), "hi": float(hi)}
+
 		# --- Final selection for the month ---
 		month_df = pd.DataFrame(results[month])
+		if month_df.empty or 'Profit_Margin_%' not in month_df.columns:
+			# No evaluations recorded for this month (or malformed); mark infeasible
+			status_by_month[month] = {
+				"feasible": False,
+				"message": "No scenarios evaluated",
+			}
+			continue
 		feasible_df = month_df[month_df['Profit_Margin_%'] >= float(min_margin_percent)]
 
 		if feasible_df.empty:
@@ -162,22 +174,46 @@ def get_best_strategy(
 				"feasible": False,
 				"message": f"No prices meet min margin {min_margin_percent}%",
 			}
-			continue
+		else:
+			best_idx = feasible_df.groupby('Outlet_ID')['Total_Profit'].idxmax()
+			month_best = feasible_df.loc[best_idx]
 
-		best_idx = feasible_df.groupby('Outlet_ID')['Total_Profit'].idxmax()
-		month_best = feasible_df.loc[best_idx]
+			# Edge-trend detection per outlet (for range expansion suggestions)
+			for outlet_id, grp in feasible_df.groupby('Outlet_ID'):
+				grp_sorted = grp.sort_values('Price')
+				prices = grp_sorted['Price'].to_list()
+				profits = grp_sorted['Total_Profit'].to_list()
+				if len(prices) < 2:
+					continue
+				best_row = month_best[month_best['Outlet_ID'] == outlet_id].iloc[0]
+				best_price = float(best_row['Price'])
+				# Check high edge
+				if abs(best_price - prices[-1]) < 1e-9:
+					if profits[-1] > profits[-2] + 1e-9:
+						edge_summary_by_month[month]['increasing_high'] += 1
+						edge_summary_by_month[month]['outlets_high'].append(outlet_id)
+				# Check low edge
+				if abs(best_price - prices[0]) < 1e-9:
+					if profits[0] > profits[1] + 1e-9:
+						edge_summary_by_month[month]['increasing_low'] += 1
+						edge_summary_by_month[month]['outlets_low'].append(outlet_id)
 
-		for _, row in month_best.iterrows():
-			outlet_id = row['Outlet_ID']
-			strategy[month][outlet_id] = {
-				'recommended_price': float(row['Price']),
-				'expected_demand_units': int(round(row['Predicted_Demand'])),
-				'expected_revenue': float(row['Revenue']),
-				'expected_total_profit': float(row['Total_Profit']),
-				'profit_margin_percentage': float(row['Profit_Margin_%']),
-			}
+			for _, row in month_best.iterrows():
+				outlet_id = row['Outlet_ID']
+				strategy[month][outlet_id] = {
+					'recommended_price': float(row['Price']),
+					'expected_demand_units': int(round(row['Predicted_Demand'])),
+					'expected_revenue': float(row['Revenue']),
+					'expected_total_profit': float(row['Total_Profit']),
+					'profit_margin_percentage': float(row['Profit_Margin_%']),
+				}
 
-	meta = {"status_by_month": status_by_month, "min_margin_percent": float(min_margin_percent)}
+	meta = {
+		"status_by_month": status_by_month,
+		"min_margin_percent": float(min_margin_percent),
+		"edge_summary_by_month": edge_summary_by_month,
+		"last_range_by_month": last_range_by_month,
+	}
 	return strategy, results, meta
 
 if __name__ == '__main__':
@@ -187,9 +223,9 @@ if __name__ == '__main__':
 	p1v4.check_model_exists()
 
 	# Example optimization with continuous range and absolute costs
-	price_min, price_max = 150.0, 400.0
+	price_min, price_max = 200.0, 320.0
 	variable_cost_abs = 120.0
-	fixed_cost_abs = 0.0
+	fixed_cost_abs = 1000.0
 	min_margin_percent = 10.0
 
 	print(f"\nOptimizing price for all months in range: {price_min}–{price_max}")
@@ -201,7 +237,7 @@ if __name__ == '__main__':
 		fixed_cost_abs=fixed_cost_abs,
 		min_margin_percent=min_margin_percent,
 		rounds=2,
-		points_per_round=21,
+		points_per_round=21
 	)
 	print(strategy)
 	print(meta)

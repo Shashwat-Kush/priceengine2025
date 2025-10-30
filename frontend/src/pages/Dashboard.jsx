@@ -148,14 +148,55 @@ function Dashboard() {
 				<ErrorBanner message={error} onClose={() => setError("")} />
 			)}
 
-			{meta && meta.status_by_month && (
+			{meta && (
 				<NoticeBanner
-					title="Feasibility summary"
-					messages={Object.entries(meta.status_by_month)
-						.filter(([, v]) => v && v.feasible === false)
-						.map(([month, v]) =>
-							`${month}: ${v?.message || "No feasible prices"}`
-						)}
+					title="Model suggestions"
+					messages={(() => {
+						const msgs = [];
+						if (meta.status_by_month) {
+							for (const [m, v] of Object.entries(
+								meta.status_by_month
+							)) {
+								if (v && v.feasible === false) {
+									msgs.push(
+										`${m}: ${
+											v.message ||
+											"No feasible prices found for the given Min Margin"
+										}`
+									);
+								}
+							}
+						}
+						if (
+							meta.edge_summary_by_month &&
+							meta.last_range_by_month
+						) {
+							for (const [m, s] of Object.entries(
+								meta.edge_summary_by_month
+							)) {
+								const rng = meta.last_range_by_month[m];
+								if (s.increasing_high > 0) {
+									msgs.push(
+										`${m}: Profit rising at upper bound for ${
+											s.increasing_high
+										} outlet(s). Consider increasing Max Price above ₹${Number(
+											rng?.hi ?? 0
+										).toFixed(2)}.`
+									);
+								}
+								if (s.increasing_low > 0) {
+									msgs.push(
+										`${m}: Profit rising towards lower bound for ${
+											s.increasing_low
+										} outlet(s). Consider decreasing Min Price below ₹${Number(
+											rng?.lo ?? 0
+										).toFixed(2)} (may violate min margin).`
+									);
+								}
+							}
+						}
+						return msgs;
+					})()}
 				/>
 			)}
 

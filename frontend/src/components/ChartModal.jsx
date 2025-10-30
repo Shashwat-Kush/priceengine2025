@@ -30,6 +30,23 @@ export default function ChartModal({
 		revenue: round2(d.Revenue),
 	}));
 
+	// Simple local edge signal for this outlet/month
+	let edgeBadge = null;
+	if (sortedData.length >= 2) {
+	const maxPrice = Number(sortedData[sortedData.length - 1].Price);
+		const maxProfit = Number(sortedData[sortedData.length - 1].Total_Profit);
+		const prevMaxProfit = Number(sortedData[sortedData.length - 2].Total_Profit);
+	const minPrice = Number(sortedData[0].Price);
+		const minProfit = Number(sortedData[0].Total_Profit);
+		const nextMinProfit = Number(sortedData[1].Total_Profit);
+		const rec = Number(strategy?.recommended_price);
+		if (Math.abs(rec - maxPrice) < 1e-6 && maxProfit > prevMaxProfit + 1e-9) {
+			edgeBadge = { text: "Edge optimum (rising ↑): consider higher Max Price", color: "#22d1aa" };
+		} else if (Math.abs(rec - minPrice) < 1e-6 && minProfit > nextMinProfit + 1e-9) {
+			edgeBadge = { text: "Edge optimum (rising ↓): consider lower Min Price", color: "#ffc107" };
+		}
+	}
+
 	// Build shaded ranges for negative-profit and below-min-margin (but non-negative profit) regions
 	const negProfitRanges = [];
 	const lowMarginRanges = [];
@@ -116,6 +133,19 @@ export default function ChartModal({
 						✕
 					</button>
 				</div>
+				{edgeBadge && (
+					<div style={{ padding: "0 24px 8px 24px" }}>
+						<span style={{
+							display: "inline-block",
+							padding: "6px 10px",
+							borderRadius: 8,
+							border: `1px solid ${edgeBadge.color}`,
+							color: edgeBadge.color,
+							background: "rgba(34,209,170,0.08)",
+							fontSize: 12,
+						}}>{edgeBadge.text}</span>
+					</div>
+				)}
 				<div style={styles.chartContainer}>
 					<ResponsiveContainer width="100%" height={400}>
 						<LineChart
