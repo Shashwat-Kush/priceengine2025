@@ -10,28 +10,53 @@ import {
 	ResponsiveContainer,
 } from "recharts";
 
-const DEFAULT_PRICES = [
-	200, 210, 220, 230, 240, 250, 260, 270, 280, 290, 300, 310, 320,
-];
+const DEFAULTS = {
+	priceMin: 200,
+	priceMax: 320,
+	variableCost: 120,
+	fixedCost: 1000,
+	minMarginPercent: 10,
+};
+
+const round2 = (v) => (v == null ? null : Math.round(Number(v) * 100) / 100);
 
 function Dashboard() {
-	const [priceInput, setPriceInput] = useState(DEFAULT_PRICES.join(", "));
+	const [priceMin, setPriceMin] = useState(String(DEFAULTS.priceMin));
+	const [priceMax, setPriceMax] = useState(String(DEFAULTS.priceMax));
+	const [variableCost, setVariableCost] = useState(
+		String(DEFAULTS.variableCost)
+	);
+	const [fixedCost, setFixedCost] = useState(String(DEFAULTS.fixedCost));
+	const [minMarginPercent, setMinMarginPercent] = useState(
+		String(DEFAULTS.minMarginPercent)
+	);
+
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState("");
 	const [strategy, setStrategy] = useState(null);
 	const [detailedAnalysis, setDetailedAnalysis] = useState(null);
 	const [modalData, setModalData] = useState(null);
 
-	const parsedPrices = useMemo(() => {
-		return priceInput
-			.split(/[,\s]+/)
-			.map((v) => v.trim())
-			.filter((v) => v.length > 0)
-			.map((v) => Number(v))
-			.filter((v) => !Number.isNaN(v) && v > 0);
-	}, [priceInput]);
+	const parsed = useMemo(() => {
+		const pMin = Number(priceMin);
+		const pMax = Number(priceMax);
+		const vCost = Number(variableCost);
+		const fCost = Number(fixedCost);
+		const margin = Number(minMarginPercent);
+		const valid =
+			[pMin, pMax, vCost, fCost, margin].every((x) => !Number.isNaN(x)) &&
+			pMin > 0 &&
+			pMax > 0 &&
+			pMax > pMin &&
+			vCost >= 0 &&
+			fCost >= 0 &&
+			margin >= 0 &&
+			margin <= 100;
+		return { pMin, pMax, vCost, fCost, margin, valid };
+	}, [priceMin, priceMax, variableCost, fixedCost, minMarginPercent]);
 
 	const handleFetch = async () => {
+		if (!parsed.valid) return;
 		setLoading(true);
 		setError("");
 		setStrategy(null);
@@ -42,12 +67,17 @@ function Dashboard() {
 				{
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({ prices: parsedPrices }),
+					body: JSON.stringify({
+						price_min: parsed.pMin,
+						price_max: parsed.pMax,
+						variable_cost: parsed.vCost,
+						fixed_cost: parsed.fCost,
+						min_margin_percent: parsed.margin,
+					}),
 				}
 			);
 			if (!res.ok) throw new Error(`Request failed (${res.status})`);
 			const data = await res.json();
-			// Expected shape: { status, input_product_details, optimization_results, detailed_analysis }
 			setStrategy(data.optimization_results || null);
 			setDetailedAnalysis(data.detailed_analysis || null);
 		} catch (e) {
@@ -82,31 +112,87 @@ function Dashboard() {
 			<div style={styles.card}>
 				<h1 style={styles.title}>AI-Driven Price Optimization</h1>
 				<p style={styles.subtitle}>
-					Find revenue-maximizing prices per month and outlet using
+					Find profit-maximizing prices per month and outlet using
 					your demand model.
 				</p>
 
-				<label style={styles.label} htmlFor="prices">
-					Candidate Prices (₹, comma or space separated)
-				</label>
-				<textarea
-					id="prices"
-					style={styles.textarea}
-					rows={3}
-					value={priceInput}
-					onChange={(e) => setPriceInput(e.target.value)}
-				/>
+				<div
+					style={{
+						display: "grid",
+						gridTemplateColumns: "repeat(2, 1fr)",
+						gap: 12,
+					}}
+				>
+					<div>
+						<label style={styles.label} htmlFor="priceMin">
+							Min Price (₹)
+						</label>
+						<input
+							id="priceMin"
+							style={styles.input}
+							value={priceMin}
+							onChange={(e) => setPriceMin(e.target.value)}
+						/>
+					</div>
+					<div>
+						<label style={styles.label} htmlFor="priceMax">
+							Max Price (₹)
+						</label>
+						<input
+							id="priceMax"
+							style={styles.input}
+							value={priceMax}
+							onChange={(e) => setPriceMax(e.target.value)}
+						/>
+					</div>
+					<div>
+						<label style={styles.label} htmlFor="variableCost">
+							Variable Cost per Unit (₹)
+						</label>
+						<input
+							id="variableCost"
+							style={styles.input}
+							value={variableCost}
+							onChange={(e) => setVariableCost(e.target.value)}
+						/>
+					</div>
+					<div>
+						<label style={styles.label} htmlFor="fixedCost">
+							Fixed Cost (₹)
+						</label>
+						<input
+							id="fixedCost"
+							style={styles.input}
+							value={fixedCost}
+							onChange={(e) => setFixedCost(e.target.value)}
+						/>
+					</div>
+					<div>
+						<label style={styles.label} htmlFor="minMargin">
+							Min Margin (%)
+						</label>
+						<input
+							id="minMargin"
+							style={styles.input}
+							value={minMarginPercent}
+							onChange={(e) =>
+								setMinMarginPercent(e.target.value)
+							}
+						/>
+					</div>
+				</div>
 
 				<button
 					style={styles.button}
 					onClick={handleFetch}
-					disabled={loading || parsedPrices.length === 0}
+					disabled={loading || !parsed.valid}
 				>
 					{loading ? "Optimizing…" : "Get Best Strategy"}
 				</button>
-				{parsedPrices.length === 0 && (
+				{!parsed.valid && (
 					<p style={styles.help}>
-						Please enter at least one positive numeric price.
+						Please enter valid numbers: priceMin &lt; priceMax,
+						non-negative costs, margin between 0 and 100.
 					</p>
 				)}
 				{error && <p style={styles.error}>Error: {error}</p>}
@@ -269,10 +355,10 @@ function ChartModal({ month, outletId, data, strategy, onClose }) {
 
 	// Format data for Recharts
 	const chartData = sortedData.map((d) => ({
-		price: d.Price,
-		demand: Math.round(d.Predicted_Demand),
-		profit: Math.round(d.Total_Profit),
-		revenue: Math.round(d.Revenue),
+		price: round2(d.Price),
+		demand: round2(d.Predicted_Demand),
+		profit: round2(d.Total_Profit),
+		revenue: round2(d.Revenue),
 	}));
 
 	// Custom tooltip for the chart
@@ -414,7 +500,7 @@ function ChartModal({ month, outletId, data, strategy, onClose }) {
 										{formatMoney(row.Price)}
 									</td>
 									<td style={styles.td}>
-										{Math.round(row.Predicted_Demand)}
+										{round2(row.Predicted_Demand)}
 									</td>
 									<td style={styles.td}>
 										{formatMoney(row.Revenue)}
@@ -457,14 +543,14 @@ const styles = {
 	title: { fontSize: 22, marginBottom: 8 },
 	subtitle: { color: "#9fb2d9", marginBottom: 16 },
 	label: { display: "block", marginBottom: 8, color: "#c6d3f5" },
-	textarea: {
+	input: {
 		width: "100%",
-		padding: 12,
+		padding: 10,
 		borderRadius: 8,
 		border: "1px solid #263557",
 		background: "#0e1524",
 		color: "#e9eefc",
-		marginBottom: 12,
+		marginBottom: 8,
 		fontFamily: "inherit",
 	},
 	button: {

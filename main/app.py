@@ -62,12 +62,24 @@ def read_root():
 # Pydantic models ensure that the data you receive is valid.
 # If a request has missing or incorrect data types, FastAPI will automatically return an error.
 class Scenario(BaseModel):
-    prices: list[float] = [150, 175, 200, 225, 250, 275, 300, 325, 350, 375, 400]
+    price_min: float = 150
+    price_max: float = 400
+    variable_cost: float = 120  # absolute per-unit cost
+    fixed_cost: float = 1000       # fixed cost per month/outlet
+    min_margin_percent: float = 10.0
+    rounds: int = 2
+    points_per_round: int = 21
 
     class Config:
         schema_extra = {
             "example": {
-                "prices": [150, 175, 200, 225, 250, 275, 300, 325, 350, 375, 400],
+                "price_min": 150,
+                "price_max": 400,
+                "variable_cost": 120,
+                "fixed_cost": 1000,
+                "min_margin_percent": 10.0,
+                "rounds": 2,
+                "points_per_round": 21
             }
         }
 
@@ -79,7 +91,15 @@ def optimize_price(scenario: Scenario):
     """
 
     try:
-        strategy, analysis = get_best_strategy(scenario.prices)
+        strategy, analysis = get_best_strategy(
+            price_min=scenario.price_min,
+            price_max=scenario.price_max,
+            variable_cost_abs=scenario.variable_cost,
+            fixed_cost_abs=scenario.fixed_cost,
+            min_margin_percent=scenario.min_margin_percent,
+            rounds=scenario.rounds,
+            points_per_round=scenario.points_per_round,
+        )
         
         return {
             "status": "success",
