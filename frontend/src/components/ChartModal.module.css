@@ -1,123 +1,214 @@
-/* Cleaned and theme-consistent styles for ChartModal */
 .modalOverlay {
 	position: fixed;
 	inset: 0;
-	background: rgba(0, 0, 0, 0.7);
+	background: rgba(0, 0, 0, 0.5);
+	backdrop-filter: blur(4px);
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	z-index: 1000;
 	padding: 20px;
+	animation: fadeIn 0.2s ease;
 }
+
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
 .modalContent {
-	background: var(--surface);
+	background: var(--bg-surface);
 	border: 1px solid var(--border);
 	border-radius: 16px;
-	max-width: 960px;
+	max-width: 1000px;
 	width: 100%;
 	max-height: 90vh;
-	overflow: auto;
-	box-shadow: var(--shadow);
+	overflow-y: auto;
+	box-shadow: var(--shadow-lg);
+	display: flex;
+	flex-direction: column;
 }
+
 .modalHeader {
 	display: flex;
-	align-items: center;
+	align-items: flex-start;
 	justify-content: space-between;
 	padding: 20px 24px;
 	border-bottom: 1px solid var(--border);
+	flex-shrink: 0;
 }
+
 .modalTitle {
 	font-size: 20px;
+	font-weight: 600;
 	margin: 0;
 	color: var(--text);
 }
+
 .modalSubtitle {
 	font-size: 14px;
 	margin: 4px 0 0 0;
 	color: var(--text-muted);
 }
+
 .closeButton {
 	background: transparent;
-	border: 1px solid var(--border-strong);
+	border: none;
 	color: var(--text-muted);
-	font-size: 20px;
-	width: 40px;
-	height: 40px;
-	border-radius: 8px;
+	font-size: 24px;
+	line-height: 1;
+	padding: 4px;
 	cursor: pointer;
-	display: flex;
-	align-items: center;
-	justify-content: center;
+	border-radius: 8px;
 }
+.closeButton:hover {
+	background: var(--bg-hover);
+	color: var(--text);
+}
+
+.edgeBanner {
+	padding: 12px 24px;
+	font-weight: 500;
+	text-align: center;
+	font-size: 14px;
+}
+.edgeBannerHigh {
+	background: var(--accent-bg);
+	color: var(--accent);
+}
+.edgeBannerLow {
+	background: var(--warning-bg);
+	color: var(--warning);
+}
+
 .chartContainer {
 	padding: 24px;
-	background: var(--surface-2);
-	border-radius: 8px;
-	margin: 0 24px 24px 24px;
+	flex-grow: 1;
 }
+
 .badgeRow {
 	display: flex;
-	gap: 8px;
-	padding: 0 24px 12px 24px;
+	flex-wrap: wrap;
+	gap: 12px;
+	padding: 0 24px 16px 24px;
+	flex-shrink: 0;
 }
+
 .badge {
 	display: inline-flex;
 	align-items: center;
 	gap: 6px;
-	padding: 4px 8px;
+	padding: 6px 10px;
 	border-radius: 8px;
-	border: 1px solid transparent;
 	font-size: 12px;
+	font-weight: 500;
 }
+.badge::before {
+	content: "";
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+}
+
 .badgeNeg {
 	background: var(--danger-bg);
-	border-color: var(--danger);
 	color: var(--danger);
 }
+.badgeNeg::before {
+	background: var(--danger);
+}
+
 .badgeLowMargin {
 	background: var(--warning-bg);
-	border-color: var(--warning);
 	color: var(--warning);
 }
+.badgeLowMargin::before {
+	background: var(--warning);
+}
+
 .chartTooltip {
-	background: var(--surface-2);
-	border: 1px solid var(--border-strong);
+	background: var(--bg-surface);
+	border: 1px solid var(--border);
 	border-radius: 8px;
 	padding: 12px;
 	color: var(--text);
+	box-shadow: var(--shadow-lg);
 }
+.tooltipLabel {
+	margin: 0 0 8px 0;
+	font-weight: 600;
+}
+.tooltipLine {
+	margin: 4px 0;
+	font-size: 13px;
+}
+.demand {
+	color: var(--primary);
+}
+.profit {
+	color: var(--accent);
+}
+
 .dataTable {
 	padding: 0 24px 24px 24px;
-	max-height: 300px;
-	overflow: auto;
+	max-height: 250px;
+	overflow-y: auto;
+	border-top: 1px solid var(--border);
+	flex-shrink: 0;
 }
+
 .table {
 	width: 100%;
 	border-collapse: collapse;
 	margin-top: 16px;
 }
+
 .th {
 	text-align: left;
-	border-bottom: 1px solid var(--border-strong);
-	padding: 10px 8px;
+	border-bottom: 1px solid var(--border);
+	padding: 12px 10px;
 	position: sticky;
 	top: 0;
-	background: var(--surface);
+	background: var(--bg-surface);
 	z-index: 1;
+	font-size: 12px;
+	color: var(--text-muted);
+	font-weight: 500;
 }
+
+.tr {
+	transition: background 0.2s ease;
+}
+
 .td {
-	padding: 10px 8px;
+	padding: 10px;
 	border-bottom: 1px solid var(--border);
+	font-size: 14px;
 }
+
 .rowNeg {
-	padding: 10px 8px;
-	border-bottom: 1px solid var(--border);
 	background: var(--danger-bg);
-	color: var(--text);
 }
 .rowLowMargin {
-	padding: 10px 8px;
-	border-bottom: 1px solid var(--border);
 	background: var(--warning-bg);
-	color: var(--text);
+}
+.rowRec {
+	background: var(--primary-bg);
+	font-weight: 600;
+}
+
+@media (max-width: 768px) {
+	.modalContent {
+		max-height: 80vh;
+	}
+	.chartContainer {
+		padding: 16px;
+	}
+	.dataTable {
+		padding: 0 16px 16px 16px;
+	}
 }

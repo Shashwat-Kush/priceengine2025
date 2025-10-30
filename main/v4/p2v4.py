@@ -199,7 +199,8 @@ def get_best_strategy(
 				# Dynamic epsilon to reduce false positives from tiny noise
 				def _is_rising(a: float, b: float) -> bool:
 					ref = max(abs(a), abs(b), 1.0)
-					return (a - b) > (1e-3 * ref)  # >0.1% relative increase
+					# return (a - b) > (1e-4 * ref)  # >0.01% relative increase
+					return a > b # Relaxed to any increase
 
 				# Optional 3-point monotonic checks on full sampled curve
 				def _rising_at_low(pr: List[float]) -> bool:
@@ -249,7 +250,7 @@ if __name__ == '__main__':
 	p1v4.check_model_exists()
 
 	# Example optimization with continuous range and absolute costs
-	price_min, price_max = 200.0, 320.0
+	price_min, price_max = 250.0, 320.0
 	variable_cost_abs = 120.0
 	fixed_cost_abs = 1000.0
 	min_margin_percent = 10.0

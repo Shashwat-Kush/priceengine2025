@@ -5,10 +5,11 @@ import ChartModal from "../components/ChartModal";
 import LoadingOverlay from "../components/LoadingOverlay";
 import ErrorBanner from "../components/ErrorBanner";
 import NoticeBanner from "../components/NoticeBanner";
+import KPICards from "../components/KPICards";
 import styles from "./Dashboard.module.css";
 
 const DEFAULTS = {
-	priceMin: 200,
+	priceMin: 250,
 	priceMax: 320,
 	variableCost: 120,
 	fixedCost: 1000,
@@ -56,12 +57,31 @@ function Dashboard() {
 		return { pMin, pMax, vCost, fCost, margin, valid };
 	}, [priceMin, priceMax, variableCost, fixedCost, minMarginPercent]);
 
+	const edgeCases = useMemo(() => {
+		// Build a map: { [month]: { [outletId]: 'high'|'low' } }
+		const cases = {};
+		if (!meta?.edge_summary_by_month) return cases;
+		for (const [m, summary] of Object.entries(meta.edge_summary_by_month)) {
+			cases[m] = cases[m] || {};
+			const highs = Array.isArray(summary?.outlets_high)
+				? summary.outlets_high
+				: [];
+			const lows = Array.isArray(summary?.outlets_low)
+				? summary.outlets_low
+				: [];
+			for (const oid of highs) cases[m][oid] = "high";
+			for (const oid of lows) cases[m][oid] = cases[m][oid] || "low";
+		}
+		return cases;
+	}, [meta]);
+
 	const handleFetch = async () => {
 		if (!parsed.valid) return;
 		setLoading(true);
 		setError("");
 		setStrategy(null);
 		setDetailedAnalysis(null);
+		setMeta(null);
 		try {
 			const res = await fetch(
 				"http://127.0.0.1:8080/v1/optimize-price/",
@@ -105,6 +125,7 @@ function Dashboard() {
 				outletId,
 				data: outletData,
 				strategy: strategy[month][outletId],
+				edge: edgeCases[month]?.[outletId],
 			});
 		}
 	};
@@ -113,6 +134,7 @@ function Dashboard() {
 
 	return (
 		<div className={`${styles.page} fade-in`}>
+			<h1 className={styles.pageTitle}>Dashboard</h1>
 			<InputsPanel
 				values={{
 					priceMin,
@@ -140,18 +162,18 @@ function Dashboard() {
 				loading={loading}
 				valid={parsed.valid}
 				showAdvanced={showAdvanced}
-				onToggleAdvanced={() => {
-					setShowAdvanced((s) => !s);
-				}}
+				onToggleAdvanced={() => setShowAdvanced((s) => !s)}
 			/>
 
 			{error && (
 				<ErrorBanner message={error} onClose={() => setError("")} />
 			)}
 
+			{(meta || strategy) && <KPICards meta={meta} strategy={strategy} />}
+
 			{meta && (
 				<NoticeBanner
-					title="Model suggestions"
+					title="Model Suggestions"
 					messages={(() => {
 						const msgs = [];
 						if (meta.status_by_month) {
@@ -178,9 +200,10 @@ function Dashboard() {
 							)) {
 								const rng = meta.last_range_by_month?.[m];
 								const feas = meta.feasible_bounds_by_month?.[m];
+								const parts = [];
 								if (s.increasing_high > 0) {
-									msgs.push(
-										`${m}: Profit rising at upper bound for ${
+									parts.push(
+										`Profit rising at upper bound for ${
 											s.increasing_high
 										} outlet(s). Consider increasing Max Price above ₹${Number(
 											feas?.max_feasible_price ??
@@ -190,8 +213,8 @@ function Dashboard() {
 									);
 								}
 								if (s.increasing_low > 0) {
-									msgs.push(
-										`${m}: Profit rising towards lower bound for ${
+									parts.push(
+										`Profit rising towards lower bound for ${
 											s.increasing_low
 										} outlet(s). Consider decreasing Min Price below ₹${Number(
 											feas?.min_feasible_price ??
@@ -199,6 +222,9 @@ function Dashboard() {
 												0
 										).toFixed(2)} (may violate min margin).`
 									);
+								}
+								if (parts.length > 0) {
+									msgs.push(`${m}: ${parts.join(" ")}`);
 								}
 							}
 						}
@@ -210,6 +236,7 @@ function Dashboard() {
 			{strategy && (
 				<StrategyTable
 					strategy={strategy}
+					edgeCases={edgeCases}
 					onCellClick={handleCellClick}
 				/>
 			)}
@@ -220,12 +247,13 @@ function Dashboard() {
 					outletId={modalData.outletId}
 					data={modalData.data}
 					strategy={modalData.strategy}
+					edge={modalData.edge}
 					onClose={closeModal}
 					minMarginPercent={parsed.margin}
 				/>
 			)}
 
-			<LoadingOverlay show={loading} text="Optimizing prices…" />
+			<LoadingOverlay show={loading} text="Analyzing scenarios..." />
 		</div>
 	);
 }

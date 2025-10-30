@@ -19,6 +19,7 @@ export default function ChartModal({
 	outletId,
 	data,
 	strategy,
+	edge,
 	onClose,
 	minMarginPercent,
 }) {
@@ -28,43 +29,9 @@ export default function ChartModal({
 		price: round2(d.Price),
 		demand: round2(d.Predicted_Demand),
 		profit: round2(d.Total_Profit),
-		revenue: round2(d.Revenue),
 	}));
 
-	// Simple local edge signal for this outlet/month
-	let edgeBadge = null;
-	if (sortedData.length >= 2) {
-		const maxPrice = Number(sortedData[sortedData.length - 1].Price);
-		const maxProfit = Number(
-			sortedData[sortedData.length - 1].Total_Profit
-		);
-		const prevMaxProfit = Number(
-			sortedData[sortedData.length - 2].Total_Profit
-		);
-		const minPrice = Number(sortedData[0].Price);
-		const minProfit = Number(sortedData[0].Total_Profit);
-		const nextMinProfit = Number(sortedData[1].Total_Profit);
-		const rec = Number(strategy?.recommended_price);
-		if (
-			Math.abs(rec - maxPrice) < 1e-6 &&
-			maxProfit > prevMaxProfit + 1e-9
-		) {
-			edgeBadge = {
-				text: "Edge optimum (rising ↑): consider higher Max Price",
-				color: "var(--accent)",
-			};
-		} else if (
-			Math.abs(rec - minPrice) < 1e-6 &&
-			minProfit > nextMinProfit + 1e-9
-		) {
-			edgeBadge = {
-				text: "Edge optimum (rising ↓): consider lower Min Price",
-				color: "var(--warning)",
-			};
-		}
-	}
-
-	// Build shaded ranges for negative-profit and below-min-margin (but non-negative profit) regions
+	// Build shaded ranges for negative-profit and below-min-margin regions
 	const negProfitRanges = [];
 	const lowMarginRanges = [];
 	let currNegStart = null;
@@ -113,34 +80,27 @@ export default function ChartModal({
 		if (active && payload && payload.length) {
 			return (
 				<div className={styles.chartTooltip}>
-					<p style={{ margin: 0, marginBottom: 4, fontWeight: 600 }}>
-						Price: ₹{payload[0].payload.price}
+					<p className={styles.tooltipLabel}>
+						Price: {formatMoney(payload[0].payload.price)}
 					</p>
-					<p
-						style={{
-							margin: 0,
-							color: "var(--primary)",
-							fontSize: 13,
-						}}
-					>
+					<p className={`${styles.tooltipLine} ${styles.demand}`}>
 						Demand: {payload[0].payload.demand} units
 					</p>
-					<p
-						style={{
-							margin: 0,
-							color: "var(--danger)",
-							fontSize: 13,
-						}}
-					>
-						Profit: ₹
-						{payload[0].payload.profit?.toLocaleString?.() ??
-							payload[0].payload.profit}
+					<p className={`${styles.tooltipLine} ${styles.profit}`}>
+						Profit: {formatMoney(payload[0].payload.profit)}
 					</p>
 				</div>
 			);
 		}
 		return null;
 	};
+
+	const edgeMessage =
+		edge === "high"
+			? "Profit is still increasing. Consider raising the max price."
+			: edge === "low"
+			? "Profit is increasing at the lower bound. Consider lowering the min price."
+			: null;
 
 	return (
 		<div className={styles.modalOverlay} onClick={onClose}>
@@ -154,45 +114,47 @@ export default function ChartModal({
 							Price Analysis: {outletId}
 						</h2>
 						<p className={styles.modalSubtitle}>
-							{month} - Recommended Price:{" "}
-							{formatMoney(strategy.recommended_price)}
+							{month} — Recommended Price:{" "}
+							<strong>
+								{formatMoney(strategy.recommended_price)}
+							</strong>
 						</p>
 					</div>
-					<button className={styles.closeButton} onClick={onClose}>
+					<button
+						className={styles.closeButton}
+						onClick={onClose}
+						aria-label="Close modal"
+					>
 						✕
 					</button>
 				</div>
-				{edgeBadge && (
-					<div style={{ padding: "0 24px 8px 24px" }}>
-						<span
-							style={{
-								display: "inline-block",
-								padding: "6px 10px",
-								borderRadius: 8,
-								border: `1px solid ${edgeBadge.color}`,
-								color: edgeBadge.color,
-								background: "transparent",
-								fontSize: 12,
-							}}
-						>
-							{edgeBadge.text}
-						</span>
+
+				{edgeMessage && (
+					<div
+						className={`${styles.edgeBanner} ${
+							edge === "high"
+								? styles.edgeBannerHigh
+								: styles.edgeBannerLow
+						}`}
+					>
+						{edgeMessage}
 					</div>
 				)}
+
 				<div className={styles.chartContainer}>
-					<ResponsiveContainer width="100%" height={400}>
+					<ResponsiveContainer width="100%" height={350}>
 						<LineChart
 							data={chartData}
 							margin={{
 								top: 20,
-								right: 30,
+								right: 20,
 								left: 20,
 								bottom: 20,
 							}}
 						>
 							<CartesianGrid
 								strokeDasharray="3 3"
-								stroke="var(--border-strong)"
+								stroke="var(--border)"
 							/>
 							{negProfitRanges.map((r, idx) => (
 								<ReferenceArea
@@ -231,7 +193,7 @@ export default function ChartModal({
 								stroke="var(--primary)"
 								tick={{ fill: "var(--primary)" }}
 								label={{
-									value: "Demand (units)",
+									value: "Demand",
 									angle: -90,
 									position: "insideLeft",
 									fill: "var(--primary)",
@@ -240,13 +202,13 @@ export default function ChartModal({
 							<YAxis
 								yAxisId="right"
 								orientation="right"
-								stroke="var(--danger)"
-								tick={{ fill: "var(--danger)" }}
+								stroke="var(--accent)"
+								tick={{ fill: "var(--accent)" }}
 								label={{
-									value: "Total Profit (₹)",
+									value: "Profit",
 									angle: 90,
 									position: "insideRight",
-									fill: "var(--danger)",
+									fill: "var(--accent)",
 								}}
 								tickFormatter={(value) =>
 									`₹${(value / 1000).toFixed(1)}k`
@@ -255,36 +217,36 @@ export default function ChartModal({
 							<Tooltip content={<CustomTooltip />} />
 							<Legend
 								wrapperStyle={{ paddingTop: "20px" }}
-								iconType="line"
+								iconType="circle"
 							/>
 							<Line
 								yAxisId="left"
 								type="monotone"
 								dataKey="demand"
 								stroke="var(--primary)"
-								strokeWidth={3}
-								dot={{ fill: "var(--primary)", r: 5 }}
-								activeDot={{ r: 7 }}
+								strokeWidth={2}
+								dot={false}
+								activeDot={{ r: 6 }}
 								name="Demand"
 							/>
 							<Line
 								yAxisId="right"
 								type="monotone"
 								dataKey="profit"
-								stroke="var(--danger)"
-								strokeWidth={3}
-								dot={{ fill: "var(--danger)", r: 5 }}
-								activeDot={{ r: 7 }}
+								stroke="var(--accent)"
+								strokeWidth={2}
+								dot={false}
+								activeDot={{ r: 6 }}
 								name="Total Profit"
 							/>
 							<ReferenceLine
 								x={round2(strategy.recommended_price)}
-								stroke="var(--accent)"
+								stroke="var(--text)"
 								strokeDasharray="4 4"
 								label={{
 									value: "Recommended",
-									fill: "var(--accent)",
-									position: "top",
+									fill: "var(--text)",
+									position: "insideTop",
 								}}
 							/>
 						</LineChart>
@@ -318,26 +280,33 @@ export default function ChartModal({
 									!neg &&
 									Number(row["Profit_Margin_%"]) <
 										Number(minMarginPercent);
-								const cellClass = neg
-									? styles.rowNeg
-									: lowM
-									? styles.rowLowMargin
-									: styles.td;
+								const isRec =
+									Math.abs(
+										Number(row.Price) -
+											strategy.recommended_price
+									) < 1e-9;
+
+								let rowClass = styles.tr;
+								if (neg) rowClass += ` ${styles.rowNeg}`;
+								else if (lowM)
+									rowClass += ` ${styles.rowLowMargin}`;
+								if (isRec) rowClass += ` ${styles.rowRec}`;
+
 								return (
-									<tr key={row.Price}>
-										<td className={cellClass}>
+									<tr key={row.Price} className={rowClass}>
+										<td className={styles.td}>
 											{formatMoney(row.Price)}
 										</td>
-										<td className={cellClass}>
+										<td className={styles.td}>
 											{round2(row.Predicted_Demand)}
 										</td>
-										<td className={cellClass}>
+										<td className={styles.td}>
 											{formatMoney(row.Revenue)}
 										</td>
-										<td className={cellClass}>
+										<td className={styles.td}>
 											{formatMoney(row.Total_Profit)}
 										</td>
-										<td className={cellClass}>
+										<td className={styles.td}>
 											{row["Profit_Margin_%"]?.toFixed(1)}
 											%
 										</td>

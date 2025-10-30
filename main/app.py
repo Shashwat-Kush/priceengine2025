@@ -62,8 +62,8 @@ def read_root():
 # Pydantic models ensure that the data you receive is valid.
 # If a request has missing or incorrect data types, FastAPI will automatically return an error.
 class Scenario(BaseModel):
-    price_min: float = 150
-    price_max: float = 400
+    price_min: float = 250
+    price_max: float = 320
     variable_cost: float = 120  # absolute per-unit cost
     fixed_cost: float = 1000       # fixed cost per month/outlet
     min_margin_percent: float = 10.0
@@ -73,8 +73,8 @@ class Scenario(BaseModel):
     class Config:
         schema_extra = {
             "example": {
-                "price_min": 150,
-                "price_max": 400,
+                "price_min": 250,
+                "price_max": 320,
                 "variable_cost": 120,
                 "fixed_cost": 1000,
                 "min_margin_percent": 10.0,
