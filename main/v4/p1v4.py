@@ -10,6 +10,8 @@ import pandas as pd
 import numpy as np
 import joblib  # <-- Added for saving/loading the model
 import os      # <-- Added to check if model file exists
+import warnings
+warnings.filterwarnings("ignore")
 
 # # Import our custom utilities module with the new name
 # Handle both standalone and package imports (robust 3-tier ladder)
@@ -99,19 +101,28 @@ def predict_demand(price: float, month: str):
     Returns:
         dict: A dictionary with outlet IDs as keys and predicted demands as values.
     """
-    # Backward-compat: ensure old pickles referencing 'demand_model.DemandModel' can be resolved
+    # Backward-compat: ensure old pickles referencing module names can be resolved
+    import sys
+    import os
+    
+    # Add the parent directory to sys.path to enable v4 module resolution
+    parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if parent_dir not in sys.path:
+        sys.path.insert(0, parent_dir)
+    
+    # Set up module aliases for pickle to find the right classes
     try:
-        import sys
         try:
             from . import demand_model as _dm
         except ImportError:
             try:
-                import v4.demand_model as _dm  # type: ignore
+                from v4 import demand_model as _dm  # type: ignore
             except ImportError:
                 import demand_model as _dm  # type: ignore
-        sys.modules.setdefault('demand_model', _dm)
-    except Exception:
-        pass
+        sys.modules['demand_model'] = _dm
+        sys.modules['v4.demand_model'] = _dm
+    except Exception as e:
+        print(f"Warning: Could not set up module aliases: {e}")
 
     try:
         trained_model = joblib.load(MODEL_FILENAME)
