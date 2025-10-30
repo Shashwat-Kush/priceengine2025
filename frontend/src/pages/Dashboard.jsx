@@ -4,6 +4,7 @@ import StrategyTable from "../components/StrategyTable";
 import ChartModal from "../components/ChartModal";
 import LoadingOverlay from "../components/LoadingOverlay";
 import ErrorBanner from "../components/ErrorBanner";
+import NoticeBanner from "../components/NoticeBanner";
 
 const DEFAULTS = {
 	priceMin: 200,
@@ -33,6 +34,7 @@ function Dashboard() {
 	const [error, setError] = useState("");
 	const [strategy, setStrategy] = useState(null);
 	const [detailedAnalysis, setDetailedAnalysis] = useState(null);
+	const [meta, setMeta] = useState(null);
 	const [modalData, setModalData] = useState(null);
 
 	const parsed = useMemo(() => {
@@ -80,6 +82,7 @@ function Dashboard() {
 			const data = await res.json();
 			setStrategy(data.optimization_results || null);
 			setDetailedAnalysis(data.detailed_analysis || null);
+			setMeta(data.meta || null);
 		} catch (e) {
 			setError(e.message || "Something went wrong");
 		} finally {
@@ -143,6 +146,17 @@ function Dashboard() {
 
 			{error && (
 				<ErrorBanner message={error} onClose={() => setError("")} />
+			)}
+
+			{meta && meta.status_by_month && (
+				<NoticeBanner
+					title="Feasibility summary"
+					messages={Object.entries(meta.status_by_month)
+						.filter(([, v]) => v && v.feasible === false)
+						.map(([month, v]) =>
+							`${month}: ${v?.message || "No feasible prices"}`
+						)}
+				/>
 			)}
 
 			{strategy && (

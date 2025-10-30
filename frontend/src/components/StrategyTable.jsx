@@ -83,6 +83,24 @@ export default function StrategyTable({ strategy, onCellClick }) {
 
 	if (!months.length) return null;
 
+	if (outlets.length === 0) {
+		return (
+			<div style={styles.card}>
+				<div style={styles.headerRow}>
+					<div>
+						<h2 style={styles.title}>Best Pricing Strategy</h2>
+						<p style={styles.subtitle}>
+							No feasible prices found for any outlet given the
+							current Min Margin and costs. Try lowering Min
+							Margin, widening the price range, or adjusting
+							costs.
+						</p>
+					</div>
+				</div>
+			</div>
+		);
+	}
+
 	return (
 		<div style={styles.card}>
 			<div style={styles.headerRow}>

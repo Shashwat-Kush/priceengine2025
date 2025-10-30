@@ -65,7 +65,7 @@ def get_best_strategy(
 	min_margin_percent: float,
 	rounds: int = 2,
 	points_per_round: int = 21,
-) -> Tuple[Dict[str, Dict[str, dict]], Dict[str, List[dict]]]:
+) -> Tuple[Dict[str, Dict[str, dict]], Dict[str, List[dict]], Dict[str, dict]]:
 	"""
 	Optimize price over a continuous range using adaptive grid search and return
 	the profit-maximizing price for all outlets for all months.
@@ -93,6 +93,7 @@ def get_best_strategy(
 
 	results: Dict[str, List[dict]] = {m: [] for m in MONTHS}
 	strategy: Dict[str, Dict[str, dict]] = {m: {} for m in MONTHS}
+	status_by_month: Dict[str, dict] = {m: {"feasible": True, "message": "ok"} for m in MONTHS}
 
 	for month in MONTHS:
 		lo, hi = float(price_min), float(price_max)
@@ -155,7 +156,12 @@ def get_best_strategy(
 		feasible_df = month_df[month_df['Profit_Margin_%'] >= float(min_margin_percent)]
 
 		if feasible_df.empty:
-			print(f"No valid pricing scenarios found for {month} after applying margin filter.")
+			msg = f"No valid pricing scenarios found for {month} after applying margin filter."
+			print(msg)
+			status_by_month[month] = {
+				"feasible": False,
+				"message": f"No prices meet min margin {min_margin_percent}%",
+			}
 			continue
 
 		best_idx = feasible_df.groupby('Outlet_ID')['Total_Profit'].idxmax()
@@ -171,7 +177,8 @@ def get_best_strategy(
 				'profit_margin_percentage': float(row['Profit_Margin_%']),
 			}
 
-	return strategy, results
+	meta = {"status_by_month": status_by_month, "min_margin_percent": float(min_margin_percent)}
+	return strategy, results, meta
 
 if __name__ == '__main__':
 	print("===== PRICING OPTIMIZATION DEMONSTRATION =====")
@@ -187,7 +194,7 @@ if __name__ == '__main__':
 
 	print(f"\nOptimizing price for all months in range: {price_min}–{price_max}")
 	print("\n--- Profit Maximization Strategy ---")
-	strategy, analysis = get_best_strategy(
+	strategy, analysis, meta = get_best_strategy(
 		price_min=price_min,
 		price_max=price_max,
 		variable_cost_abs=variable_cost_abs,
@@ -197,3 +204,4 @@ if __name__ == '__main__':
 		points_per_round=21,
 	)
 	print(strategy)
+	print(meta)

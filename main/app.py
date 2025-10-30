@@ -91,7 +91,7 @@ def optimize_price(scenario: Scenario):
     """
 
     try:
-        strategy, analysis = get_best_strategy(
+        strategy, analysis, meta = get_best_strategy(
             price_min=scenario.price_min,
             price_max=scenario.price_max,
             variable_cost_abs=scenario.variable_cost,
@@ -105,7 +105,8 @@ def optimize_price(scenario: Scenario):
             "status": "success",
             "input_scenario": scenario.model_dump(),
             "optimization_results": strategy,
-            "detailed_analysis": analysis
+            "detailed_analysis": analysis,
+            "meta": meta,
         }
     except Exception as e:
         return {
