@@ -96,6 +96,7 @@ def get_best_strategy(
 	status_by_month: Dict[str, dict] = {m: {"feasible": True, "message": "ok"} for m in MONTHS}
 	edge_summary_by_month: Dict[str, dict] = {m: {"increasing_high": 0, "increasing_low": 0, "outlets_high": [], "outlets_low": []} for m in MONTHS}
 	last_range_by_month: Dict[str, dict] = {m: {"lo": None, "hi": None} for m in MONTHS}
+	feasible_bounds_by_month: Dict[str, dict] = {m: {"min_feasible_price": None, "max_feasible_price": None} for m in MONTHS}
 
 	for month in MONTHS:
 		lo, hi = float(price_min), float(price_max)
@@ -166,6 +167,12 @@ def get_best_strategy(
 			}
 			continue
 		feasible_df = month_df[month_df['Profit_Margin_%'] >= float(min_margin_percent)]
+		# Record feasible price bounds for UX messaging
+		if not feasible_df.empty:
+			feasible_bounds_by_month[month] = {
+				"min_feasible_price": float(feasible_df['Price'].min()),
+				"max_feasible_price": float(feasible_df['Price'].max()),
+			}
 
 		if feasible_df.empty:
 			msg = f"No valid pricing scenarios found for {month} after applying margin filter."
@@ -179,24 +186,42 @@ def get_best_strategy(
 			month_best = feasible_df.loc[best_idx]
 
 			# Edge-trend detection per outlet (for range expansion suggestions)
-			for outlet_id, grp in feasible_df.groupby('Outlet_ID'):
-				grp_sorted = grp.sort_values('Price')
-				prices = grp_sorted['Price'].to_list()
-				profits = grp_sorted['Total_Profit'].to_list()
-				if len(prices) < 2:
+			for outlet_id, _ in feasible_df.groupby('Outlet_ID'):
+				# Use all sampled points for this outlet to judge edge trends
+				grp_all = month_df[month_df['Outlet_ID'] == outlet_id].sort_values('Price')
+				all_prices = grp_all['Price'].to_list()
+				all_profits = grp_all['Total_Profit'].to_list()
+				if len(all_prices) < 2:
 					continue
 				best_row = month_best[month_best['Outlet_ID'] == outlet_id].iloc[0]
 				best_price = float(best_row['Price'])
-				# Check high edge
-				if abs(best_price - prices[-1]) < 1e-9:
-					if profits[-1] > profits[-2] + 1e-9:
-						edge_summary_by_month[month]['increasing_high'] += 1
-						edge_summary_by_month[month]['outlets_high'].append(outlet_id)
-				# Check low edge
-				if abs(best_price - prices[0]) < 1e-9:
-					if profits[0] > profits[1] + 1e-9:
-						edge_summary_by_month[month]['increasing_low'] += 1
-						edge_summary_by_month[month]['outlets_low'].append(outlet_id)
+
+				# Dynamic epsilon to reduce false positives from tiny noise
+				def _is_rising(a: float, b: float) -> bool:
+					ref = max(abs(a), abs(b), 1.0)
+					return (a - b) > (1e-3 * ref)  # >0.1% relative increase
+
+				# Optional 3-point monotonic checks on full sampled curve
+				def _rising_at_low(pr: List[float]) -> bool:
+					if len(pr) >= 3:
+						return _is_rising(pr[0], pr[1]) and _is_rising(pr[1], pr[2])
+					return _is_rising(pr[0], pr[1])
+
+				def _rising_at_high(pr: List[float]) -> bool:
+					if len(pr) >= 3:
+						return _is_rising(pr[-1], pr[-2]) and _is_rising(pr[-2], pr[-3])
+					return _is_rising(pr[-1], pr[-2])
+
+				at_global_low = abs(best_price - all_prices[0]) < 1e-9
+				at_global_high = abs(best_price - all_prices[-1]) < 1e-9
+
+				# Only flag edges if the best feasible price sits at the global sampled edge
+				if at_global_high and _rising_at_high(all_profits):
+					edge_summary_by_month[month]['increasing_high'] += 1
+					edge_summary_by_month[month]['outlets_high'].append(outlet_id)
+				if at_global_low and _rising_at_low(all_profits):
+					edge_summary_by_month[month]['increasing_low'] += 1
+					edge_summary_by_month[month]['outlets_low'].append(outlet_id)
 
 			for _, row in month_best.iterrows():
 				outlet_id = row['Outlet_ID']
@@ -213,6 +238,7 @@ def get_best_strategy(
 		"min_margin_percent": float(min_margin_percent),
 		"edge_summary_by_month": edge_summary_by_month,
 		"last_range_by_month": last_range_by_month,
+		"feasible_bounds_by_month": feasible_bounds_by_month,
 	}
 	return strategy, results, meta
 

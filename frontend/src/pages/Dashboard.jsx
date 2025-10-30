@@ -169,18 +169,22 @@ function Dashboard() {
 						}
 						if (
 							meta.edge_summary_by_month &&
-							meta.last_range_by_month
+							(meta.last_range_by_month ||
+								meta.feasible_bounds_by_month)
 						) {
 							for (const [m, s] of Object.entries(
 								meta.edge_summary_by_month
 							)) {
-								const rng = meta.last_range_by_month[m];
+								const rng = meta.last_range_by_month?.[m];
+								const feas = meta.feasible_bounds_by_month?.[m];
 								if (s.increasing_high > 0) {
 									msgs.push(
 										`${m}: Profit rising at upper bound for ${
 											s.increasing_high
 										} outlet(s). Consider increasing Max Price above ₹${Number(
-											rng?.hi ?? 0
+											feas?.max_feasible_price ??
+												rng?.hi ??
+												0
 										).toFixed(2)}.`
 									);
 								}
@@ -189,7 +193,9 @@ function Dashboard() {
 										`${m}: Profit rising towards lower bound for ${
 											s.increasing_low
 										} outlet(s). Consider decreasing Min Price below ₹${Number(
-											rng?.lo ?? 0
+											feas?.min_feasible_price ??
+												rng?.lo ??
+												0
 										).toFixed(2)} (may violate min margin).`
 									);
 								}
