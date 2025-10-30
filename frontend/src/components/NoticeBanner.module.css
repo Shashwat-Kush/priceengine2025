@@ -1,0 +1,21 @@
+.wrap {
+	width: min(1100px, 96vw);
+	background: var(--surface-2);
+	color: var(--text);
+	border: 1px solid var(--border);
+	border-radius: 10px;
+	padding: 12px;
+}
+.header {
+	font-weight: 700;
+	margin-bottom: 6px;
+	color: var(--text);
+}
+.list {
+	margin: 0;
+	padding-left: 18px;
+}
+.item {
+	margin: 4px 0;
+	color: var(--text-muted);
+}

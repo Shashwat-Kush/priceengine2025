@@ -10,6 +10,7 @@ import {
 	ReferenceLine,
 	ReferenceArea,
 } from "recharts";
+import styles from "./ChartModal.module.css";
 
 const round2 = (v) => (v == null ? null : Math.round(Number(v) * 100) / 100);
 
@@ -33,17 +34,33 @@ export default function ChartModal({
 	// Simple local edge signal for this outlet/month
 	let edgeBadge = null;
 	if (sortedData.length >= 2) {
-	const maxPrice = Number(sortedData[sortedData.length - 1].Price);
-		const maxProfit = Number(sortedData[sortedData.length - 1].Total_Profit);
-		const prevMaxProfit = Number(sortedData[sortedData.length - 2].Total_Profit);
-	const minPrice = Number(sortedData[0].Price);
+		const maxPrice = Number(sortedData[sortedData.length - 1].Price);
+		const maxProfit = Number(
+			sortedData[sortedData.length - 1].Total_Profit
+		);
+		const prevMaxProfit = Number(
+			sortedData[sortedData.length - 2].Total_Profit
+		);
+		const minPrice = Number(sortedData[0].Price);
 		const minProfit = Number(sortedData[0].Total_Profit);
 		const nextMinProfit = Number(sortedData[1].Total_Profit);
 		const rec = Number(strategy?.recommended_price);
-		if (Math.abs(rec - maxPrice) < 1e-6 && maxProfit > prevMaxProfit + 1e-9) {
-			edgeBadge = { text: "Edge optimum (rising ↑): consider higher Max Price", color: "#22d1aa" };
-		} else if (Math.abs(rec - minPrice) < 1e-6 && minProfit > nextMinProfit + 1e-9) {
-			edgeBadge = { text: "Edge optimum (rising ↓): consider lower Min Price", color: "#ffc107" };
+		if (
+			Math.abs(rec - maxPrice) < 1e-6 &&
+			maxProfit > prevMaxProfit + 1e-9
+		) {
+			edgeBadge = {
+				text: "Edge optimum (rising ↑): consider higher Max Price",
+				color: "var(--accent)",
+			};
+		} else if (
+			Math.abs(rec - minPrice) < 1e-6 &&
+			minProfit > nextMinProfit + 1e-9
+		) {
+			edgeBadge = {
+				text: "Edge optimum (rising ↓): consider lower Min Price",
+				color: "var(--warning)",
+			};
 		}
 	}
 
@@ -95,14 +112,26 @@ export default function ChartModal({
 	const CustomTooltip = ({ active, payload }) => {
 		if (active && payload && payload.length) {
 			return (
-				<div style={styles.chartTooltip}>
+				<div className={styles.chartTooltip}>
 					<p style={{ margin: 0, marginBottom: 4, fontWeight: 600 }}>
 						Price: ₹{payload[0].payload.price}
 					</p>
-					<p style={{ margin: 0, color: "#4f7cff", fontSize: 13 }}>
+					<p
+						style={{
+							margin: 0,
+							color: "var(--primary)",
+							fontSize: 13,
+						}}
+					>
 						Demand: {payload[0].payload.demand} units
 					</p>
-					<p style={{ margin: 0, color: "#ff6b9d", fontSize: 13 }}>
+					<p
+						style={{
+							margin: 0,
+							color: "var(--danger)",
+							fontSize: 13,
+						}}
+					>
 						Profit: ₹
 						{payload[0].payload.profit?.toLocaleString?.() ??
 							payload[0].payload.profit}
@@ -114,39 +143,43 @@ export default function ChartModal({
 	};
 
 	return (
-		<div style={styles.modalOverlay} onClick={onClose}>
+		<div className={styles.modalOverlay} onClick={onClose}>
 			<div
-				style={styles.modalContent}
+				className={styles.modalContent}
 				onClick={(e) => e.stopPropagation()}
 			>
-				<div style={styles.modalHeader}>
+				<div className={styles.modalHeader}>
 					<div>
-						<h2 style={styles.modalTitle}>
+						<h2 className={styles.modalTitle}>
 							Price Analysis: {outletId}
 						</h2>
-						<p style={styles.modalSubtitle}>
+						<p className={styles.modalSubtitle}>
 							{month} - Recommended Price:{" "}
 							{formatMoney(strategy.recommended_price)}
 						</p>
 					</div>
-					<button style={styles.closeButton} onClick={onClose}>
+					<button className={styles.closeButton} onClick={onClose}>
 						✕
 					</button>
 				</div>
 				{edgeBadge && (
 					<div style={{ padding: "0 24px 8px 24px" }}>
-						<span style={{
-							display: "inline-block",
-							padding: "6px 10px",
-							borderRadius: 8,
-							border: `1px solid ${edgeBadge.color}`,
-							color: edgeBadge.color,
-							background: "rgba(34,209,170,0.08)",
-							fontSize: 12,
-						}}>{edgeBadge.text}</span>
+						<span
+							style={{
+								display: "inline-block",
+								padding: "6px 10px",
+								borderRadius: 8,
+								border: `1px solid ${edgeBadge.color}`,
+								color: edgeBadge.color,
+								background: "transparent",
+								fontSize: 12,
+							}}
+						>
+							{edgeBadge.text}
+						</span>
 					</div>
 				)}
-				<div style={styles.chartContainer}>
+				<div className={styles.chartContainer}>
 					<ResponsiveContainer width="100%" height={400}>
 						<LineChart
 							data={chartData}
@@ -159,17 +192,15 @@ export default function ChartModal({
 						>
 							<CartesianGrid
 								strokeDasharray="3 3"
-								stroke="#263557"
+								stroke="var(--border-strong)"
 							/>
-							{/* Shaded risk regions */}
 							{negProfitRanges.map((r, idx) => (
 								<ReferenceArea
 									key={`neg-${idx}`}
 									x1={r.x1}
 									x2={r.x2}
-									fill="#ff6b9d"
-									fillOpacity={0.12}
-									stroke="#ff6b9d"
+									fill="var(--danger-bg)"
+									stroke="var(--danger)"
 									strokeOpacity={0.3}
 								/>
 							))}
@@ -178,45 +209,44 @@ export default function ChartModal({
 									key={`lm-${idx}`}
 									x1={r.x1}
 									x2={r.x2}
-									fill="#ffc107"
-									fillOpacity={0.12}
-									stroke="#ffc107"
+									fill="var(--warning-bg)"
+									stroke="var(--warning)"
 									strokeOpacity={0.3}
 								/>
 							))}
 							<XAxis
 								dataKey="price"
-								stroke="#9fb2d9"
-								tick={{ fill: "#9fb2d9" }}
+								stroke="var(--text-muted)"
+								tick={{ fill: "var(--text-muted)" }}
 								label={{
 									value: "Price (₹)",
 									position: "insideBottom",
 									offset: -10,
-									fill: "#c6d3f5",
+									fill: "var(--text-muted)",
 								}}
 								tickFormatter={(value) => `₹${value}`}
 							/>
 							<YAxis
 								yAxisId="left"
-								stroke="#4f7cff"
-								tick={{ fill: "#4f7cff" }}
+								stroke="var(--primary)"
+								tick={{ fill: "var(--primary)" }}
 								label={{
 									value: "Demand (units)",
 									angle: -90,
 									position: "insideLeft",
-									fill: "#4f7cff",
+									fill: "var(--primary)",
 								}}
 							/>
 							<YAxis
 								yAxisId="right"
 								orientation="right"
-								stroke="#ff6b9d"
-								tick={{ fill: "#ff6b9d" }}
+								stroke="var(--danger)"
+								tick={{ fill: "var(--danger)" }}
 								label={{
 									value: "Total Profit (₹)",
 									angle: 90,
 									position: "insideRight",
-									fill: "#ff6b9d",
+									fill: "var(--danger)",
 								}}
 								tickFormatter={(value) =>
 									`₹${(value / 1000).toFixed(1)}k`
@@ -231,9 +261,9 @@ export default function ChartModal({
 								yAxisId="left"
 								type="monotone"
 								dataKey="demand"
-								stroke="#4f7cff"
+								stroke="var(--primary)"
 								strokeWidth={3}
-								dot={{ fill: "#4f7cff", r: 5 }}
+								dot={{ fill: "var(--primary)", r: 5 }}
 								activeDot={{ r: 7 }}
 								name="Demand"
 							/>
@@ -241,56 +271,44 @@ export default function ChartModal({
 								yAxisId="right"
 								type="monotone"
 								dataKey="profit"
-								stroke="#ff6b9d"
+								stroke="var(--danger)"
 								strokeWidth={3}
-								dot={{ fill: "#ff6b9d", r: 5 }}
+								dot={{ fill: "var(--danger)", r: 5 }}
 								activeDot={{ r: 7 }}
 								name="Total Profit"
 							/>
 							<ReferenceLine
 								x={round2(strategy.recommended_price)}
-								stroke="#22d1aa"
+								stroke="var(--accent)"
 								strokeDasharray="4 4"
 								label={{
 									value: "Recommended",
-									fill: "#22d1aa",
+									fill: "var(--accent)",
 									position: "top",
 								}}
 							/>
 						</LineChart>
 					</ResponsiveContainer>
 				</div>
-				<div style={styles.badgeRow}>
-					<span
-						style={{
-							...styles.badge,
-							background: "rgba(255,107,157,0.2)",
-							borderColor: "#ff6b9d",
-							color: "#ffb3c9",
-						}}
-					>
+				<div className={styles.badgeRow}>
+					<span className={`${styles.badge} ${styles.badgeNeg}`}>
 						Negative profit
 					</span>
 					<span
-						style={{
-							...styles.badge,
-							background: "rgba(255,193,7,0.2)",
-							borderColor: "#ffc107",
-							color: "#ffe08a",
-						}}
+						className={`${styles.badge} ${styles.badgeLowMargin}`}
 					>
 						Below min margin ({Number(minMarginPercent)}%)
 					</span>
 				</div>
-				<div style={styles.dataTable}>
-					<table style={styles.table}>
+				<div className={styles.dataTable}>
+					<table className={styles.table}>
 						<thead>
 							<tr>
-								<th style={styles.th}>Price</th>
-								<th style={styles.th}>Demand</th>
-								<th style={styles.th}>Revenue</th>
-								<th style={styles.th}>Profit</th>
-								<th style={styles.th}>Margin</th>
+								<th className={styles.th}>Price</th>
+								<th className={styles.th}>Demand</th>
+								<th className={styles.th}>Revenue</th>
+								<th className={styles.th}>Profit</th>
+								<th className={styles.th}>Margin</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -300,26 +318,26 @@ export default function ChartModal({
 									!neg &&
 									Number(row["Profit_Margin_%"]) <
 										Number(minMarginPercent);
-								const cellStyle = neg
+								const cellClass = neg
 									? styles.rowNeg
 									: lowM
 									? styles.rowLowMargin
 									: styles.td;
 								return (
 									<tr key={row.Price}>
-										<td style={cellStyle}>
+										<td className={cellClass}>
 											{formatMoney(row.Price)}
 										</td>
-										<td style={cellStyle}>
+										<td className={cellClass}>
 											{round2(row.Predicted_Demand)}
 										</td>
-										<td style={cellStyle}>
+										<td className={cellClass}>
 											{formatMoney(row.Revenue)}
 										</td>
-										<td style={cellStyle}>
+										<td className={cellClass}>
 											{formatMoney(row.Total_Profit)}
 										</td>
-										<td style={cellStyle}>
+										<td className={cellClass}>
 											{row["Profit_Margin_%"]?.toFixed(1)}
 											%
 										</td>
@@ -333,107 +351,3 @@ export default function ChartModal({
 		</div>
 	);
 }
-
-const styles = {
-	modalOverlay: {
-		position: "fixed",
-		top: 0,
-		left: 0,
-		right: 0,
-		bottom: 0,
-		background: "rgba(0, 0, 0, 0.7)",
-		display: "flex",
-		alignItems: "center",
-		justifyContent: "center",
-		zIndex: 1000,
-		padding: "20px",
-	},
-	modalContent: {
-		background: "#121a2a",
-		border: "1px solid #1f2a44",
-		borderRadius: 16,
-		maxWidth: "900px",
-		width: "100%",
-		maxHeight: "90vh",
-		overflow: "auto",
-		boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
-	},
-	modalHeader: {
-		display: "flex",
-		alignItems: "center",
-		justifyContent: "space-between",
-		padding: "24px",
-		borderBottom: "1px solid #1f2a44",
-	},
-	modalTitle: { fontSize: 22, margin: 0, color: "#e9eefc" },
-	modalSubtitle: { fontSize: 14, margin: "4px 0 0 0", color: "#9fb2d9" },
-	closeButton: {
-		background: "transparent",
-		border: "1px solid #263557",
-		color: "#9fb2d9",
-		fontSize: 24,
-		width: 40,
-		height: 40,
-		borderRadius: 8,
-		cursor: "pointer",
-		display: "flex",
-		alignItems: "center",
-		justifyContent: "center",
-		transition: "all 0.2s",
-	},
-	chartContainer: {
-		padding: "24px",
-		background: "#0e1524",
-		borderRadius: 8,
-		margin: "0 24px 24px 24px",
-	},
-	badgeRow: {
-		display: "flex",
-		gap: 8,
-		padding: "0 24px 12px 24px",
-	},
-	badge: {
-		display: "inline-flex",
-		alignItems: "center",
-		gap: 6,
-		padding: "4px 8px",
-		borderRadius: 8,
-		border: "1px solid transparent",
-		fontSize: 12,
-	},
-	chartTooltip: {
-		background: "#0e1524",
-		border: "1px solid #263557",
-		borderRadius: 8,
-		padding: 12,
-		color: "#e9eefc",
-	},
-	dataTable: {
-		padding: "0 24px 24px 24px",
-		maxHeight: "300px",
-		overflow: "auto",
-	},
-	table: { width: "100%", borderCollapse: "collapse", marginTop: 16 },
-	th: {
-		textAlign: "left",
-		borderBottom: "1px solid #263557",
-		padding: "10px 8px",
-		position: "sticky",
-		top: 0,
-		background: "#121a2a",
-		zIndex: 1,
-	},
-	td: { padding: "10px 8px", borderBottom: "1px solid #1a2744" },
-	rowNeg: {
-		padding: "10px 8px",
-		borderBottom: "1px solid #1a2744",
-		background: "#2b1f24",
-		color: "#ffd2d2",
-	},
-	rowLowMargin: {
-		padding: "10px 8px",
-		borderBottom: "1px solid #1a2744",
-		background: "#2a2513",
-		color: "#ffe9b3",
-	},
-};

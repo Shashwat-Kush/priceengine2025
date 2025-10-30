@@ -5,6 +5,7 @@ import ChartModal from "../components/ChartModal";
 import LoadingOverlay from "../components/LoadingOverlay";
 import ErrorBanner from "../components/ErrorBanner";
 import NoticeBanner from "../components/NoticeBanner";
+import styles from "./Dashboard.module.css";
 
 const DEFAULTS = {
 	priceMin: 200,
@@ -111,7 +112,7 @@ function Dashboard() {
 	const closeModal = () => setModalData(null);
 
 	return (
-		<div style={styles.page}>
+		<div className={`${styles.page} fade-in`}>
 			<InputsPanel
 				values={{
 					priceMin,
@@ -228,28 +229,4 @@ function Dashboard() {
 		</div>
 	);
 }
-
-const styles = {
-	page: {
-		minHeight: "100vh",
-		background: "#0b1220",
-		color: "#e9eefc",
-		padding: "32px",
-		display: "flex",
-		flexDirection: "column",
-		gap: "24px",
-		alignItems: "center",
-	},
-	card: {
-		width: "min(1100px, 96vw)",
-		background: "#121a2a",
-		border: "1px solid #1f2a44",
-		borderRadius: 12,
-		padding: 24,
-		boxShadow: "0 10px 30px rgba(0,0,0,0.4)",
-	},
-	title: { fontSize: 22, marginBottom: 8 },
-	subtitle: { color: "#9fb2d9", marginBottom: 16 },
-};
-
 export default Dashboard;

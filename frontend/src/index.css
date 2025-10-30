@@ -1,5 +1,19 @@
+@import url("./styles/theme.css");
+
 * {
 	box-sizing: border-box;
 	margin: 0;
 	padding: 0;
+}
+
+a {
+	color: inherit;
+}
+
+/* Smooth hover transitions globally */
+button,
+a,
+input,
+select {
+	transition: all 0.2s ease;
 }

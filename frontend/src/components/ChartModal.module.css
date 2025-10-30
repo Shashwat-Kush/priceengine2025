@@ -1,0 +1,123 @@
+/* Cleaned and theme-consistent styles for ChartModal */
+.modalOverlay {
+	position: fixed;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.7);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 1000;
+	padding: 20px;
+}
+.modalContent {
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: 16px;
+	max-width: 960px;
+	width: 100%;
+	max-height: 90vh;
+	overflow: auto;
+	box-shadow: var(--shadow);
+}
+.modalHeader {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 20px 24px;
+	border-bottom: 1px solid var(--border);
+}
+.modalTitle {
+	font-size: 20px;
+	margin: 0;
+	color: var(--text);
+}
+.modalSubtitle {
+	font-size: 14px;
+	margin: 4px 0 0 0;
+	color: var(--text-muted);
+}
+.closeButton {
+	background: transparent;
+	border: 1px solid var(--border-strong);
+	color: var(--text-muted);
+	font-size: 20px;
+	width: 40px;
+	height: 40px;
+	border-radius: 8px;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+.chartContainer {
+	padding: 24px;
+	background: var(--surface-2);
+	border-radius: 8px;
+	margin: 0 24px 24px 24px;
+}
+.badgeRow {
+	display: flex;
+	gap: 8px;
+	padding: 0 24px 12px 24px;
+}
+.badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 8px;
+	border-radius: 8px;
+	border: 1px solid transparent;
+	font-size: 12px;
+}
+.badgeNeg {
+	background: var(--danger-bg);
+	border-color: var(--danger);
+	color: var(--danger);
+}
+.badgeLowMargin {
+	background: var(--warning-bg);
+	border-color: var(--warning);
+	color: var(--warning);
+}
+.chartTooltip {
+	background: var(--surface-2);
+	border: 1px solid var(--border-strong);
+	border-radius: 8px;
+	padding: 12px;
+	color: var(--text);
+}
+.dataTable {
+	padding: 0 24px 24px 24px;
+	max-height: 300px;
+	overflow: auto;
+}
+.table {
+	width: 100%;
+	border-collapse: collapse;
+	margin-top: 16px;
+}
+.th {
+	text-align: left;
+	border-bottom: 1px solid var(--border-strong);
+	padding: 10px 8px;
+	position: sticky;
+	top: 0;
+	background: var(--surface);
+	z-index: 1;
+}
+.td {
+	padding: 10px 8px;
+	border-bottom: 1px solid var(--border);
+}
+.rowNeg {
+	padding: 10px 8px;
+	border-bottom: 1px solid var(--border);
+	background: var(--danger-bg);
+	color: var(--text);
+}
+.rowLowMargin {
+	padding: 10px 8px;
+	border-bottom: 1px solid var(--border);
+	background: var(--warning-bg);
+	color: var(--text);
+}

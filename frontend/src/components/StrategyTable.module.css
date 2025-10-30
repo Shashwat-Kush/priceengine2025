@@ -1,0 +1,89 @@
+.card {
+	width: min(1100px, 96vw);
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: var(--card-radius);
+	padding: 24px;
+	box-shadow: var(--shadow);
+}
+.headerRow {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	margin-bottom: 8px;
+}
+.title {
+	font-size: 20px;
+	margin: 0;
+	color: var(--text);
+}
+.subtitle {
+	color: var(--text-muted);
+	margin-top: 6px;
+}
+.tableWrap {
+	overflow-x: auto;
+}
+.table {
+	width: 100%;
+	border-collapse: collapse;
+	margin-top: 8px;
+}
+.th {
+	text-align: left;
+	border-bottom: 1px solid var(--border-strong);
+	padding: 10px 8px;
+	position: sticky;
+	top: 0;
+	background: var(--surface);
+	z-index: 1;
+}
+.tdHeader {
+	padding: 10px 8px;
+	border-right: 1px solid var(--border-strong);
+	white-space: nowrap;
+	font-weight: 600;
+}
+.td {
+	padding: 10px 8px;
+	border-bottom: 1px solid var(--border);
+}
+.note {
+	margin-top: 10px;
+	color: var(--text-muted);
+}
+.tooltipContainer {
+	position: relative;
+	display: inline-block;
+}
+.tooltipBubble {
+	position: absolute;
+	top: calc(100% + 6px);
+	left: 0;
+	background: var(--surface-2);
+	border: 1px solid var(--border-strong);
+	border-radius: 10px;
+	padding: 10px;
+	min-width: 220px;
+	box-shadow: var(--shadow);
+	z-index: 5;
+}
+.tooltipRow {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	font-size: 12px;
+	padding: 4px 0;
+	border-bottom: 1px dashed var(--border);
+}
+.tooltipRow:last-child {
+	border-bottom: 0;
+}
+.clickableCell {
+	cursor: pointer;
+}
+.priceValue {
+	font-weight: 700;
+}
