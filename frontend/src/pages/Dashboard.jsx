@@ -249,7 +249,7 @@ function Dashboard() {
 					strategy={modalData.strategy}
 					edge={modalData.edge}
 					onClose={closeModal}
-					minMarginPercent={parsed.margin}
+					minMarginPercent={meta.min_margin_percent}
 				/>
 			)}
 

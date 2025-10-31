@@ -82,6 +82,7 @@ def get_best_strategy(
 	Returns:
 		strategy: {month: {outlet_id: {recommended_price, expected_*}}}
 		results: {month: [rows of evaluated scenarios for charts/analysis]}
+		meta: Additional metadata and status information.
 	"""
 
 	if price_min >= price_max:
