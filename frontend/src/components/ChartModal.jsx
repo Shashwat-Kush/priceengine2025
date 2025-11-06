@@ -9,6 +9,7 @@ import {
 	ResponsiveContainer,
 	ReferenceLine,
 	ReferenceArea,
+	ReferenceDot,
 } from "recharts";
 import styles from "./ChartModal.module.css";
 
@@ -30,6 +31,21 @@ export default function ChartModal({
 		demand: round2(d.Predicted_Demand),
 		profit: round2(d.Total_Profit),
 	}));
+
+	// Locate the data point closest to the recommended price for dot markers
+	const recPrice = round2(strategy.recommended_price);
+	let optPoint = null;
+	if (chartData && chartData.length) {
+		optPoint = chartData.reduce((best, curr) => {
+			const currDiff = Math.abs(curr.price - recPrice);
+			const bestDiff = best ? Math.abs(best.price - recPrice) : Infinity;
+			return currDiff < bestDiff ? curr : best;
+		}, null);
+		// If the closest point is still too far (e.g., no matching sample), ignore marker
+		if (optPoint && Math.abs(optPoint.price - recPrice) > 1e-3) {
+			optPoint = null;
+		}
+	}
 
 	// Build shaded ranges for negative-profit and below-min-margin regions
 	const negProfitRanges = [];
@@ -249,6 +265,38 @@ export default function ChartModal({
 									position: "insideTop",
 								}}
 							/>
+							{optPoint && (
+								<>
+									<ReferenceDot
+										yAxisId="right"
+										x={optPoint.price}
+										y={optPoint.profit}
+										r={5}
+										fill="var(--accent)"
+										stroke="var(--bg-surface)"
+										strokeWidth={2}
+										label={{
+											value: "Max Profit",
+											fill: "var(--accent)",
+											position: "top",
+										}}
+									/>
+									<ReferenceDot
+										yAxisId="left"
+										x={optPoint.price}
+										y={optPoint.demand}
+										r={5}
+										fill="var(--primary)"
+										stroke="var(--bg-surface)"
+										strokeWidth={2}
+										label={{
+											value: "Optimal Demand",
+											fill: "var(--primary)",
+											position: "top",
+										}}
+									/>
+								</>
+							)}
 						</LineChart>
 					</ResponsiveContainer>
 				</div>
