@@ -5,11 +5,17 @@
 #              re-train the model.
 # ==============================================================================
 
+import sys
 import pandas as pd
 import numpy as np
 import joblib
 import shap
 import os
+
+
+os.environ['OMP_NUM_THREADS'] = '1'
+os.environ['MKL_NUM_THREADS'] = '1'
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
 
 # ---
 # ### Step 0: Import Utils and Model Definition
@@ -17,21 +23,32 @@ import os
 # We need to import these so joblib can correctly load the saved model object
 # This assumes 'p1v4_utils.py' and 'demand_model.py' are in the same directory
 # or your Python path is set up correctly.
+# Handle both standalone and package imports (robust 3-tier ladder)
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PARENT_DIR = os.path.dirname(SCRIPT_DIR)
+if PARENT_DIR not in sys.path:
+    sys.path.insert(0, PARENT_DIR)
+
+print(f"Added {PARENT_DIR} to sys.path to find module 'v4'")
+
 try:
-    import p1v4_utils as utils
-    from demand_model import DemandModel
+    from . import p1v4_utils as utils  # package-relative
 except ImportError:
-    print("ERROR: Could not import 'p1v4_utils.py' or 'demand_model.py'.")
-    print("Please make sure these files are in the same directory as 'explain_model.py'.")
-    exit()
+    try:
+        from v4 import p1v4_utils as utils  # package absolute
+    except ImportError:
+        import p1v4_utils as utils  # bare (script)
 
-# ---
-# ### Step 1: Load the Pre-Trained Model
-# ---
-print("--- Step 1: Loading Pre-Trained Model ---")
+try:
+    from .demand_model import DemandModel  # package-relative
+except ImportError:
+    try:
+        from v4.demand_model import DemandModel  # package absolute
+    except ImportError:
+        from demand_model import DemandModel  # bare (script)
 
-# Use the exact model path you provided
-MODEL_FILENAME = '/Users/shashwatkushwaha/Desktop/AcadProj/Acad/MTP/priceengine2025/main/models/demand_model.pkl'
+# Define the filename for our saved model
+MODEL_FILENAME = 'main/models/demand_model.pkl'
 
 try:
     model_object = joblib.load(MODEL_FILENAME)
@@ -76,7 +93,7 @@ print(f"✓ Training data re-created with {len(X_train)} rows.\n")
 print("--- Step 3: Initializing the SHAP Explainer ---")
 # Since the training set is large, we use a summary (e.g., k-means)
 # to make the explainer fast.
-X_train_summary = shap.kmeans(X_train, 100) # 100 clusters
+X_train_summary = shap.sample(X_train, 100) # 100 clusters
 
 # We explain the actual LinearRegression model, which is model_object.model
 explainer = shap.Explainer(model_object.model, X_train_summary)
