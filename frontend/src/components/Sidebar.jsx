@@ -3,8 +3,8 @@ import styles from "./Sidebar.module.css";
 
 const links = [
 	{ to: "/", label: "Dashboard", icon: "📊" },
-	{ to: "/analytics", label: "Analytics", icon: "📈" },
-	{ to: "/settings", label: "Settings", icon: "⚙️" },
+	// { to: "/analytics", label: "Analytics", icon: "📈" },
+	// { to: "/settings", label: "Settings", icon: "⚙️" },
 ];
 
 export default function Sidebar() {
@@ -12,7 +12,7 @@ export default function Sidebar() {
 		<nav className={styles.sidebar}>
 			<div className={styles.logo}>
 				<span role="img" aria-label="logo">
-					💎
+					📈
 				</span>
 				<span>AI Pricing</span>
 			</div>
