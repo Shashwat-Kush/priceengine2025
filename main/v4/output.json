@@ -1,0 +1,1116 @@
+{
+	"strategy": {
+		"January": {
+			"OUT010": {
+				"recommended_price": 264.0,
+				"expected_demand_units": 13,
+				"expected_revenue": 3563.9446560883257,
+				"expected_total_profit": 943.969812411814,
+				"profit_margin_percentage": 54.54545454545454
+			},
+			"OUT013": {
+				"recommended_price": 302.5,
+				"expected_demand_units": 16,
+				"expected_revenue": 4731.330699435836,
+				"expected_total_profit": 1854.4391823042652,
+				"profit_margin_percentage": 60.33057851239669
+			},
+			"OUT017": {
+				"recommended_price": 302.5,
+				"expected_demand_units": 16,
+				"expected_revenue": 4731.330699435836,
+				"expected_total_profit": 1854.4391823042652,
+				"profit_margin_percentage": 60.33057851239669
+			},
+			"OUT018": {
+				"recommended_price": 313.0,
+				"expected_demand_units": 15,
+				"expected_revenue": 4652.753209920119,
+				"expected_total_profit": 1868.9500623469107,
+				"profit_margin_percentage": 61.66134185303515
+			},
+			"OUT019": {
+				"recommended_price": 264.0,
+				"expected_demand_units": 13,
+				"expected_revenue": 3563.9446560883257,
+				"expected_total_profit": 943.969812411814,
+				"profit_margin_percentage": 54.54545454545454
+			},
+			"OUT027": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 17,
+				"expected_revenue": 5523.7590162086335,
+				"expected_total_profit": 2452.349385130396,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT035": {
+				"recommended_price": 302.5,
+				"expected_demand_units": 16,
+				"expected_revenue": 4731.330699435836,
+				"expected_total_profit": 1854.4391823042652,
+				"profit_margin_percentage": 60.33057851239669
+			},
+			"OUT045": {
+				"recommended_price": 302.5,
+				"expected_demand_units": 16,
+				"expected_revenue": 4731.330699435836,
+				"expected_total_profit": 1854.4391823042652,
+				"profit_margin_percentage": 60.33057851239669
+			},
+			"OUT046": {
+				"recommended_price": 302.5,
+				"expected_demand_units": 16,
+				"expected_revenue": 4731.330699435836,
+				"expected_total_profit": 1854.4391823042652,
+				"profit_margin_percentage": 60.33057851239669
+			},
+			"OUT049": {
+				"recommended_price": 302.5,
+				"expected_demand_units": 16,
+				"expected_revenue": 4731.330699435836,
+				"expected_total_profit": 1854.4391823042652,
+				"profit_margin_percentage": 60.33057851239669
+			}
+		},
+		"February": {
+			"OUT010": {
+				"recommended_price": 264.0,
+				"expected_demand_units": 13,
+				"expected_revenue": 3563.9446560883257,
+				"expected_total_profit": 943.969812411814,
+				"profit_margin_percentage": 54.54545454545454
+			},
+			"OUT013": {
+				"recommended_price": 302.5,
+				"expected_demand_units": 16,
+				"expected_revenue": 4731.330699435836,
+				"expected_total_profit": 1854.4391823042652,
+				"profit_margin_percentage": 60.33057851239669
+			},
+			"OUT017": {
+				"recommended_price": 302.5,
+				"expected_demand_units": 16,
+				"expected_revenue": 4731.330699435836,
+				"expected_total_profit": 1854.4391823042652,
+				"profit_margin_percentage": 60.33057851239669
+			},
+			"OUT018": {
+				"recommended_price": 313.0,
+				"expected_demand_units": 15,
+				"expected_revenue": 4652.753209920119,
+				"expected_total_profit": 1868.9500623469107,
+				"profit_margin_percentage": 61.66134185303515
+			},
+			"OUT019": {
+				"recommended_price": 264.0,
+				"expected_demand_units": 13,
+				"expected_revenue": 3563.9446560883257,
+				"expected_total_profit": 943.969812411814,
+				"profit_margin_percentage": 54.54545454545454
+			},
+			"OUT027": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 17,
+				"expected_revenue": 5523.7590162086335,
+				"expected_total_profit": 2452.349385130396,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT035": {
+				"recommended_price": 302.5,
+				"expected_demand_units": 16,
+				"expected_revenue": 4731.330699435836,
+				"expected_total_profit": 1854.4391823042652,
+				"profit_margin_percentage": 60.33057851239669
+			},
+			"OUT045": {
+				"recommended_price": 302.5,
+				"expected_demand_units": 16,
+				"expected_revenue": 4731.330699435836,
+				"expected_total_profit": 1854.4391823042652,
+				"profit_margin_percentage": 60.33057851239669
+			},
+			"OUT046": {
+				"recommended_price": 302.5,
+				"expected_demand_units": 16,
+				"expected_revenue": 4731.330699435836,
+				"expected_total_profit": 1854.4391823042652,
+				"profit_margin_percentage": 60.33057851239669
+			},
+			"OUT049": {
+				"recommended_price": 302.5,
+				"expected_demand_units": 16,
+				"expected_revenue": 4731.330699435836,
+				"expected_total_profit": 1854.4391823042652,
+				"profit_margin_percentage": 60.33057851239669
+			}
+		},
+		"March": {
+			"OUT010": {
+				"recommended_price": 313.875,
+				"expected_demand_units": 15,
+				"expected_revenue": 4562.421109492355,
+				"expected_total_profit": 1818.1263006063891,
+				"profit_margin_percentage": 61.76821983273596
+			},
+			"OUT013": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 20,
+				"expected_revenue": 6371.894875285779,
+				"expected_total_profit": 2982.4342970536113,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT017": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 20,
+				"expected_revenue": 6371.894875285779,
+				"expected_total_profit": 2982.4342970536113,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT018": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 20,
+				"expected_revenue": 6425.071881148561,
+				"expected_total_profit": 3015.669925717851,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT019": {
+				"recommended_price": 313.875,
+				"expected_demand_units": 15,
+				"expected_revenue": 4562.421109492355,
+				"expected_total_profit": 1818.1263006063891,
+				"profit_margin_percentage": 61.76821983273596
+			},
+			"OUT027": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 23,
+				"expected_revenue": 7362.032562681727,
+				"expected_total_profit": 3601.2703516760794,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT035": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 20,
+				"expected_revenue": 6371.894875285779,
+				"expected_total_profit": 2982.4342970536113,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT045": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 20,
+				"expected_revenue": 6371.894875285779,
+				"expected_total_profit": 2982.4342970536113,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT046": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 20,
+				"expected_revenue": 6371.894875285779,
+				"expected_total_profit": 2982.4342970536113,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT049": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 20,
+				"expected_revenue": 6371.894875285779,
+				"expected_total_profit": 2982.4342970536113,
+				"profit_margin_percentage": 62.5
+			}
+		},
+		"April": {
+			"OUT010": {
+				"recommended_price": 313.875,
+				"expected_demand_units": 15,
+				"expected_revenue": 4562.421109492355,
+				"expected_total_profit": 1818.1263006063891,
+				"profit_margin_percentage": 61.76821983273596
+			},
+			"OUT013": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 20,
+				"expected_revenue": 6371.894875285779,
+				"expected_total_profit": 2982.4342970536113,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT017": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 20,
+				"expected_revenue": 6371.894875285779,
+				"expected_total_profit": 2982.4342970536113,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT018": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 20,
+				"expected_revenue": 6425.071881148561,
+				"expected_total_profit": 3015.669925717851,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT019": {
+				"recommended_price": 313.875,
+				"expected_demand_units": 15,
+				"expected_revenue": 4562.421109492355,
+				"expected_total_profit": 1818.1263006063891,
+				"profit_margin_percentage": 61.76821983273596
+			},
+			"OUT027": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 23,
+				"expected_revenue": 7362.032562681727,
+				"expected_total_profit": 3601.2703516760794,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT035": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 20,
+				"expected_revenue": 6371.894875285779,
+				"expected_total_profit": 2982.4342970536113,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT045": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 20,
+				"expected_revenue": 6371.894875285779,
+				"expected_total_profit": 2982.4342970536113,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT046": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 20,
+				"expected_revenue": 6371.894875285779,
+				"expected_total_profit": 2982.4342970536113,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT049": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 20,
+				"expected_revenue": 6371.894875285779,
+				"expected_total_profit": 2982.4342970536113,
+				"profit_margin_percentage": 62.5
+			}
+		},
+		"May": {
+			"OUT010": {
+				"recommended_price": 313.875,
+				"expected_demand_units": 15,
+				"expected_revenue": 4562.421109492355,
+				"expected_total_profit": 1818.1263006063891,
+				"profit_margin_percentage": 61.76821983273596
+			},
+			"OUT013": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 20,
+				"expected_revenue": 6371.894875285779,
+				"expected_total_profit": 2982.4342970536113,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT017": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 20,
+				"expected_revenue": 6371.894875285779,
+				"expected_total_profit": 2982.4342970536113,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT018": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 20,
+				"expected_revenue": 6425.071881148561,
+				"expected_total_profit": 3015.669925717851,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT019": {
+				"recommended_price": 313.875,
+				"expected_demand_units": 15,
+				"expected_revenue": 4562.421109492355,
+				"expected_total_profit": 1818.1263006063891,
+				"profit_margin_percentage": 61.76821983273596
+			},
+			"OUT027": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 23,
+				"expected_revenue": 7362.032562681727,
+				"expected_total_profit": 3601.2703516760794,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT035": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 20,
+				"expected_revenue": 6371.894875285779,
+				"expected_total_profit": 2982.4342970536113,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT045": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 20,
+				"expected_revenue": 6371.894875285779,
+				"expected_total_profit": 2982.4342970536113,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT046": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 20,
+				"expected_revenue": 6371.894875285779,
+				"expected_total_profit": 2982.4342970536113,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT049": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 20,
+				"expected_revenue": 6371.894875285779,
+				"expected_total_profit": 2982.4342970536113,
+				"profit_margin_percentage": 62.5
+			}
+		},
+		"June": {
+			"OUT010": {
+				"recommended_price": 313.875,
+				"expected_demand_units": 15,
+				"expected_revenue": 4562.421109492355,
+				"expected_total_profit": 1818.1263006063891,
+				"profit_margin_percentage": 61.76821983273596
+			},
+			"OUT013": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 20,
+				"expected_revenue": 6371.894875285779,
+				"expected_total_profit": 2982.4342970536113,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT017": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 20,
+				"expected_revenue": 6371.894875285779,
+				"expected_total_profit": 2982.4342970536113,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT018": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 20,
+				"expected_revenue": 6425.071881148561,
+				"expected_total_profit": 3015.669925717851,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT019": {
+				"recommended_price": 313.875,
+				"expected_demand_units": 15,
+				"expected_revenue": 4562.421109492355,
+				"expected_total_profit": 1818.1263006063891,
+				"profit_margin_percentage": 61.76821983273596
+			},
+			"OUT027": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 23,
+				"expected_revenue": 7362.032562681727,
+				"expected_total_profit": 3601.2703516760794,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT035": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 20,
+				"expected_revenue": 6371.894875285779,
+				"expected_total_profit": 2982.4342970536113,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT045": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 20,
+				"expected_revenue": 6371.894875285779,
+				"expected_total_profit": 2982.4342970536113,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT046": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 20,
+				"expected_revenue": 6371.894875285779,
+				"expected_total_profit": 2982.4342970536113,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT049": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 20,
+				"expected_revenue": 6371.894875285779,
+				"expected_total_profit": 2982.4342970536113,
+				"profit_margin_percentage": 62.5
+			}
+		},
+		"July": {
+			"OUT010": {
+				"recommended_price": 250.0,
+				"expected_demand_units": 15,
+				"expected_revenue": 3698.7454458315997,
+				"expected_total_profit": 923.347631832432,
+				"profit_margin_percentage": 52.0
+			},
+			"OUT013": {
+				"recommended_price": 265.925,
+				"expected_demand_units": 18,
+				"expected_revenue": 4815.265169344434,
+				"expected_total_profit": 1642.3524295819743,
+				"profit_margin_percentage": 54.87449468835198
+			},
+			"OUT017": {
+				"recommended_price": 265.925,
+				"expected_demand_units": 18,
+				"expected_revenue": 4815.265169344434,
+				"expected_total_profit": 1642.3524295819743,
+				"profit_margin_percentage": 54.87449468835198
+			},
+			"OUT018": {
+				"recommended_price": 271.0,
+				"expected_demand_units": 17,
+				"expected_revenue": 4673.236475231501,
+				"expected_total_profit": 1603.9066707009465,
+				"profit_margin_percentage": 55.71955719557196
+			},
+			"OUT019": {
+				"recommended_price": 250.0,
+				"expected_demand_units": 15,
+				"expected_revenue": 3698.7454458315997,
+				"expected_total_profit": 923.347631832432,
+				"profit_margin_percentage": 52.0
+			},
+			"OUT027": {
+				"recommended_price": 279.575,
+				"expected_demand_units": 20,
+				"expected_revenue": 5462.203768517426,
+				"expected_total_profit": 2117.7006755295297,
+				"profit_margin_percentage": 57.07770723419476
+			},
+			"OUT035": {
+				"recommended_price": 265.925,
+				"expected_demand_units": 18,
+				"expected_revenue": 4815.265169344434,
+				"expected_total_profit": 1642.3524295819743,
+				"profit_margin_percentage": 54.87449468835198
+			},
+			"OUT045": {
+				"recommended_price": 265.925,
+				"expected_demand_units": 18,
+				"expected_revenue": 4815.265169344434,
+				"expected_total_profit": 1642.3524295819743,
+				"profit_margin_percentage": 54.87449468835198
+			},
+			"OUT046": {
+				"recommended_price": 265.925,
+				"expected_demand_units": 18,
+				"expected_revenue": 4815.265169344434,
+				"expected_total_profit": 1642.3524295819743,
+				"profit_margin_percentage": 54.87449468835198
+			},
+			"OUT049": {
+				"recommended_price": 265.925,
+				"expected_demand_units": 18,
+				"expected_revenue": 4815.265169344434,
+				"expected_total_profit": 1642.3524295819743,
+				"profit_margin_percentage": 54.87449468835198
+			}
+		},
+		"August": {
+			"OUT010": {
+				"recommended_price": 250.0,
+				"expected_demand_units": 15,
+				"expected_revenue": 3698.7454458315997,
+				"expected_total_profit": 923.347631832432,
+				"profit_margin_percentage": 52.0
+			},
+			"OUT013": {
+				"recommended_price": 265.925,
+				"expected_demand_units": 18,
+				"expected_revenue": 4815.265169344434,
+				"expected_total_profit": 1642.3524295819743,
+				"profit_margin_percentage": 54.87449468835198
+			},
+			"OUT017": {
+				"recommended_price": 265.925,
+				"expected_demand_units": 18,
+				"expected_revenue": 4815.265169344434,
+				"expected_total_profit": 1642.3524295819743,
+				"profit_margin_percentage": 54.87449468835198
+			},
+			"OUT018": {
+				"recommended_price": 271.0,
+				"expected_demand_units": 17,
+				"expected_revenue": 4673.236475231501,
+				"expected_total_profit": 1603.9066707009465,
+				"profit_margin_percentage": 55.71955719557196
+			},
+			"OUT019": {
+				"recommended_price": 250.0,
+				"expected_demand_units": 15,
+				"expected_revenue": 3698.7454458315997,
+				"expected_total_profit": 923.347631832432,
+				"profit_margin_percentage": 52.0
+			},
+			"OUT027": {
+				"recommended_price": 279.575,
+				"expected_demand_units": 20,
+				"expected_revenue": 5462.203768517426,
+				"expected_total_profit": 2117.7006755295297,
+				"profit_margin_percentage": 57.07770723419476
+			},
+			"OUT035": {
+				"recommended_price": 265.925,
+				"expected_demand_units": 18,
+				"expected_revenue": 4815.265169344434,
+				"expected_total_profit": 1642.3524295819743,
+				"profit_margin_percentage": 54.87449468835198
+			},
+			"OUT045": {
+				"recommended_price": 265.925,
+				"expected_demand_units": 18,
+				"expected_revenue": 4815.265169344434,
+				"expected_total_profit": 1642.3524295819743,
+				"profit_margin_percentage": 54.87449468835198
+			},
+			"OUT046": {
+				"recommended_price": 265.925,
+				"expected_demand_units": 18,
+				"expected_revenue": 4815.265169344434,
+				"expected_total_profit": 1642.3524295819743,
+				"profit_margin_percentage": 54.87449468835198
+			},
+			"OUT049": {
+				"recommended_price": 265.925,
+				"expected_demand_units": 18,
+				"expected_revenue": 4815.265169344434,
+				"expected_total_profit": 1642.3524295819743,
+				"profit_margin_percentage": 54.87449468835198
+			}
+		},
+		"September": {
+			"OUT010": {
+				"recommended_price": 250.0,
+				"expected_demand_units": 15,
+				"expected_revenue": 3698.7454458315997,
+				"expected_total_profit": 923.347631832432,
+				"profit_margin_percentage": 52.0
+			},
+			"OUT013": {
+				"recommended_price": 265.925,
+				"expected_demand_units": 18,
+				"expected_revenue": 4815.265169344434,
+				"expected_total_profit": 1642.3524295819743,
+				"profit_margin_percentage": 54.87449468835198
+			},
+			"OUT017": {
+				"recommended_price": 265.925,
+				"expected_demand_units": 18,
+				"expected_revenue": 4815.265169344434,
+				"expected_total_profit": 1642.3524295819743,
+				"profit_margin_percentage": 54.87449468835198
+			},
+			"OUT018": {
+				"recommended_price": 271.0,
+				"expected_demand_units": 17,
+				"expected_revenue": 4673.236475231501,
+				"expected_total_profit": 1603.9066707009465,
+				"profit_margin_percentage": 55.71955719557196
+			},
+			"OUT019": {
+				"recommended_price": 250.0,
+				"expected_demand_units": 15,
+				"expected_revenue": 3698.7454458315997,
+				"expected_total_profit": 923.347631832432,
+				"profit_margin_percentage": 52.0
+			},
+			"OUT027": {
+				"recommended_price": 279.575,
+				"expected_demand_units": 20,
+				"expected_revenue": 5462.203768517426,
+				"expected_total_profit": 2117.7006755295297,
+				"profit_margin_percentage": 57.07770723419476
+			},
+			"OUT035": {
+				"recommended_price": 265.925,
+				"expected_demand_units": 18,
+				"expected_revenue": 4815.265169344434,
+				"expected_total_profit": 1642.3524295819743,
+				"profit_margin_percentage": 54.87449468835198
+			},
+			"OUT045": {
+				"recommended_price": 265.925,
+				"expected_demand_units": 18,
+				"expected_revenue": 4815.265169344434,
+				"expected_total_profit": 1642.3524295819743,
+				"profit_margin_percentage": 54.87449468835198
+			},
+			"OUT046": {
+				"recommended_price": 265.925,
+				"expected_demand_units": 18,
+				"expected_revenue": 4815.265169344434,
+				"expected_total_profit": 1642.3524295819743,
+				"profit_margin_percentage": 54.87449468835198
+			},
+			"OUT049": {
+				"recommended_price": 265.925,
+				"expected_demand_units": 18,
+				"expected_revenue": 4815.265169344434,
+				"expected_total_profit": 1642.3524295819743,
+				"profit_margin_percentage": 54.87449468835198
+			}
+		},
+		"October": {
+			"OUT010": {
+				"recommended_price": 304.25,
+				"expected_demand_units": 14,
+				"expected_revenue": 4335.86539012465,
+				"expected_total_profit": 1625.7459264764725,
+				"profit_margin_percentage": 60.558751027115854
+			},
+			"OUT013": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 19,
+				"expected_revenue": 6038.7932085939965,
+				"expected_total_profit": 2774.2457553712475,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT017": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 19,
+				"expected_revenue": 6038.7932085939965,
+				"expected_total_profit": 2774.2457553712475,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT018": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 19,
+				"expected_revenue": 6091.970214456779,
+				"expected_total_profit": 2807.4813840354873,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT019": {
+				"recommended_price": 304.25,
+				"expected_demand_units": 14,
+				"expected_revenue": 4335.86539012465,
+				"expected_total_profit": 1625.7459264764725,
+				"profit_margin_percentage": 60.558751027115854
+			},
+			"OUT027": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 22,
+				"expected_revenue": 7028.9308959899445,
+				"expected_total_profit": 3393.081809993716,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT035": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 19,
+				"expected_revenue": 6038.7932085939965,
+				"expected_total_profit": 2774.2457553712475,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT045": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 19,
+				"expected_revenue": 6038.7932085939965,
+				"expected_total_profit": 2774.2457553712475,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT046": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 19,
+				"expected_revenue": 6038.7932085939965,
+				"expected_total_profit": 2774.2457553712475,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT049": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 19,
+				"expected_revenue": 6038.7932085939965,
+				"expected_total_profit": 2774.2457553712475,
+				"profit_margin_percentage": 62.5
+			}
+		},
+		"November": {
+			"OUT010": {
+				"recommended_price": 304.25,
+				"expected_demand_units": 14,
+				"expected_revenue": 4335.86539012465,
+				"expected_total_profit": 1625.7459264764725,
+				"profit_margin_percentage": 60.558751027115854
+			},
+			"OUT013": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 19,
+				"expected_revenue": 6038.7932085939965,
+				"expected_total_profit": 2774.2457553712475,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT017": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 19,
+				"expected_revenue": 6038.7932085939965,
+				"expected_total_profit": 2774.2457553712475,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT018": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 19,
+				"expected_revenue": 6091.970214456779,
+				"expected_total_profit": 2807.4813840354873,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT019": {
+				"recommended_price": 304.25,
+				"expected_demand_units": 14,
+				"expected_revenue": 4335.86539012465,
+				"expected_total_profit": 1625.7459264764725,
+				"profit_margin_percentage": 60.558751027115854
+			},
+			"OUT027": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 22,
+				"expected_revenue": 7028.9308959899445,
+				"expected_total_profit": 3393.081809993716,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT035": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 19,
+				"expected_revenue": 6038.7932085939965,
+				"expected_total_profit": 2774.2457553712475,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT045": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 19,
+				"expected_revenue": 6038.7932085939965,
+				"expected_total_profit": 2774.2457553712475,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT046": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 19,
+				"expected_revenue": 6038.7932085939965,
+				"expected_total_profit": 2774.2457553712475,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT049": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 19,
+				"expected_revenue": 6038.7932085939965,
+				"expected_total_profit": 2774.2457553712475,
+				"profit_margin_percentage": 62.5
+			}
+		},
+		"December": {
+			"OUT010": {
+				"recommended_price": 264.0,
+				"expected_demand_units": 13,
+				"expected_revenue": 3563.9446560883257,
+				"expected_total_profit": 943.969812411814,
+				"profit_margin_percentage": 54.54545454545454
+			},
+			"OUT013": {
+				"recommended_price": 302.5,
+				"expected_demand_units": 16,
+				"expected_revenue": 4731.330699435836,
+				"expected_total_profit": 1854.4391823042652,
+				"profit_margin_percentage": 60.33057851239669
+			},
+			"OUT017": {
+				"recommended_price": 302.5,
+				"expected_demand_units": 16,
+				"expected_revenue": 4731.330699435836,
+				"expected_total_profit": 1854.4391823042652,
+				"profit_margin_percentage": 60.33057851239669
+			},
+			"OUT018": {
+				"recommended_price": 313.0,
+				"expected_demand_units": 15,
+				"expected_revenue": 4652.753209920119,
+				"expected_total_profit": 1868.9500623469107,
+				"profit_margin_percentage": 61.66134185303515
+			},
+			"OUT019": {
+				"recommended_price": 264.0,
+				"expected_demand_units": 13,
+				"expected_revenue": 3563.9446560883257,
+				"expected_total_profit": 943.969812411814,
+				"profit_margin_percentage": 54.54545454545454
+			},
+			"OUT027": {
+				"recommended_price": 320.0,
+				"expected_demand_units": 17,
+				"expected_revenue": 5523.7590162086335,
+				"expected_total_profit": 2452.349385130396,
+				"profit_margin_percentage": 62.5
+			},
+			"OUT035": {
+				"recommended_price": 302.5,
+				"expected_demand_units": 16,
+				"expected_revenue": 4731.330699435836,
+				"expected_total_profit": 1854.4391823042652,
+				"profit_margin_percentage": 60.33057851239669
+			},
+			"OUT045": {
+				"recommended_price": 302.5,
+				"expected_demand_units": 16,
+				"expected_revenue": 4731.330699435836,
+				"expected_total_profit": 1854.4391823042652,
+				"profit_margin_percentage": 60.33057851239669
+			},
+			"OUT046": {
+				"recommended_price": 302.5,
+				"expected_demand_units": 16,
+				"expected_revenue": 4731.330699435836,
+				"expected_total_profit": 1854.4391823042652,
+				"profit_margin_percentage": 60.33057851239669
+			},
+			"OUT049": {
+				"recommended_price": 302.5,
+				"expected_demand_units": 16,
+				"expected_revenue": 4731.330699435836,
+				"expected_total_profit": 1854.4391823042652,
+				"profit_margin_percentage": 60.33057851239669
+			}
+		}
+	},
+	"Analysis (January)": [
+		{
+			"Outlet_ID": "OUT049",
+			"Price": 250.0,
+			"Predicted_Demand": 20.06035061343348,
+			"Revenue": 5015.0876533583705,
+			"Total_Profit": 1607.8455797463525,
+			"Profit_Margin_%": 52.0
+		},
+		{
+			"Outlet_ID": "OUT018",
+			"Price": 250.0,
+			"Predicted_Demand": 19.646559135019903,
+			"Revenue": 4911.639783754976,
+			"Total_Profit": 1554.0526875525875,
+			"Profit_Margin_%": 52.0
+		},
+		{
+			"Outlet_ID": "OUT010",
+			"Price": 250.0,
+			"Predicted_Demand": 14.791569725569758,
+			"Revenue": 3697.8924313924394,
+			"Total_Profit": 922.9040643240685,
+			"Profit_Margin_%": 52.0
+		},
+		{
+			"Outlet_ID": "OUT013",
+			"Price": 250.0,
+			"Predicted_Demand": 20.06035061343348,
+			"Revenue": 5015.0876533583705,
+			"Total_Profit": 1607.8455797463525,
+			"Profit_Margin_%": 52.0
+		},
+		{
+			"Outlet_ID": "OUT027",
+			"Price": 250.0,
+			"Predicted_Demand": 23.17608052135477,
+			"Revenue": 5794.020130338692,
+			"Total_Profit": 2012.8904677761202,
+			"Profit_Margin_%": 52.0
+		}
+	],
+	"Meta": {
+		"status_by_month": {
+			"January": { "feasible": "True", "message": "ok" },
+			"February": { "feasible": "True", "message": "ok" },
+			"March": { "feasible": "True", "message": "ok" },
+			"April": { "feasible": "True", "message": "ok" },
+			"May": { "feasible": "True", "message": "ok" },
+			"June": { "feasible": "True", "message": "ok" },
+			"July": { "feasible": "True", "message": "ok" },
+			"August": { "feasible": "True", "message": "ok" },
+			"September": { "feasible": "True", "message": "ok" },
+			"October": { "feasible": "True", "message": "ok" },
+			"November": { "feasible": "True", "message": "ok" },
+			"December": { "feasible": "True", "message": "ok" }
+		},
+		"min_margin_percent": 10.0,
+		"edge_summary_by_month": {
+			"January": {
+				"increasing_high": 1,
+				"increasing_low": 0,
+				"outlets_high": ["OUT027"],
+				"outlets_low": []
+			},
+			"February": {
+				"increasing_high": 1,
+				"increasing_low": 0,
+				"outlets_high": ["OUT027"],
+				"outlets_low": []
+			},
+			"March": {
+				"increasing_high": 8,
+				"increasing_low": 0,
+				"outlets_high": [
+					"OUT013",
+					"OUT017",
+					"OUT018",
+					"OUT027",
+					"OUT035",
+					"OUT045",
+					"OUT046",
+					"OUT049"
+				],
+				"outlets_low": []
+			},
+			"April": {
+				"increasing_high": 8,
+				"increasing_low": 0,
+				"outlets_high": [
+					"OUT013",
+					"OUT017",
+					"OUT018",
+					"OUT027",
+					"OUT035",
+					"OUT045",
+					"OUT046",
+					"OUT049"
+				],
+				"outlets_low": []
+			},
+			"May": {
+				"increasing_high": 8,
+				"increasing_low": 0,
+				"outlets_high": [
+					"OUT013",
+					"OUT017",
+					"OUT018",
+					"OUT027",
+					"OUT035",
+					"OUT045",
+					"OUT046",
+					"OUT049"
+				],
+				"outlets_low": []
+			},
+			"June": {
+				"increasing_high": 8,
+				"increasing_low": 0,
+				"outlets_high": [
+					"OUT013",
+					"OUT017",
+					"OUT018",
+					"OUT027",
+					"OUT035",
+					"OUT045",
+					"OUT046",
+					"OUT049"
+				],
+				"outlets_low": []
+			},
+			"July": {
+				"increasing_high": 0,
+				"increasing_low": 2,
+				"outlets_high": [],
+				"outlets_low": ["OUT010", "OUT019"]
+			},
+			"August": {
+				"increasing_high": 0,
+				"increasing_low": 2,
+				"outlets_high": [],
+				"outlets_low": ["OUT010", "OUT019"]
+			},
+			"September": {
+				"increasing_high": 0,
+				"increasing_low": 2,
+				"outlets_high": [],
+				"outlets_low": ["OUT010", "OUT019"]
+			},
+			"October": {
+				"increasing_high": 8,
+				"increasing_low": 0,
+				"outlets_high": [
+					"OUT013",
+					"OUT017",
+					"OUT018",
+					"OUT027",
+					"OUT035",
+					"OUT045",
+					"OUT046",
+					"OUT049"
+				],
+				"outlets_low": []
+			},
+			"November": {
+				"increasing_high": 8,
+				"increasing_low": 0,
+				"outlets_high": [
+					"OUT013",
+					"OUT017",
+					"OUT018",
+					"OUT027",
+					"OUT035",
+					"OUT045",
+					"OUT046",
+					"OUT049"
+				],
+				"outlets_low": []
+			},
+			"December": {
+				"increasing_high": 1,
+				"increasing_low": 0,
+				"outlets_high": ["OUT027"],
+				"outlets_low": []
+			}
+		},
+		"last_range_by_month": {
+			"January": { "lo": 250.0, "hi": 320.0 },
+			"February": { "lo": 250.0, "hi": 320.0 },
+			"March": { "lo": 307.75, "hi": 320.0 },
+			"April": { "lo": 307.75, "hi": 320.0 },
+			"May": { "lo": 307.75, "hi": 320.0 },
+			"June": { "lo": 307.75, "hi": 320.0 },
+			"July": { "lo": 250.0, "hi": 290.95 },
+			"August": { "lo": 250.0, "hi": 290.95 },
+			"September": { "lo": 250.0, "hi": 290.95 },
+			"October": { "lo": 296.375, "hi": 320.0 },
+			"November": { "lo": 296.375, "hi": 320.0 },
+			"December": { "lo": 250.0, "hi": 320.0 }
+		},
+		"feasible_bounds_by_month": {
+			"January": {
+				"min_feasible_price": 250.0,
+				"max_feasible_price": 320.0
+			},
+			"February": {
+				"min_feasible_price": 250.0,
+				"max_feasible_price": 320.0
+			},
+			"March": {
+				"min_feasible_price": 250.0,
+				"max_feasible_price": 320.0
+			},
+			"April": {
+				"min_feasible_price": 250.0,
+				"max_feasible_price": 320.0
+			},
+			"May": { "min_feasible_price": 250.0, "max_feasible_price": 320.0 },
+			"June": {
+				"min_feasible_price": 250.0,
+				"max_feasible_price": 320.0
+			},
+			"July": {
+				"min_feasible_price": 250.0,
+				"max_feasible_price": 320.0
+			},
+			"August": {
+				"min_feasible_price": 250.0,
+				"max_feasible_price": 320.0
+			},
+			"September": {
+				"min_feasible_price": 250.0,
+				"max_feasible_price": 320.0
+			},
+			"October": {
+				"min_feasible_price": 250.0,
+				"max_feasible_price": 320.0
+			},
+			"November": {
+				"min_feasible_price": 250.0,
+				"max_feasible_price": 320.0
+			},
+			"December": {
+				"min_feasible_price": 250.0,
+				"max_feasible_price": 320.0
+			}
+		}
+	}
+}

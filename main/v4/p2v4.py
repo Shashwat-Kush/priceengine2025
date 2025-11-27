@@ -267,5 +267,6 @@ if __name__ == '__main__':
 		rounds=2,
 		points_per_round=21
 	)
-	print(strategy)
-	print(meta)
+	print("Strategy", strategy)
+	print("Analysis (January)", analysis['January'][:5])  # print first 5 rows for January
+	print("Meta", meta)
