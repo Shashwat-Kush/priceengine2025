@@ -10,7 +10,7 @@ jobs:
         runs-on: ubuntu-latest
         defaults:
             run:
-                working-directory: frontend
+                working-directory: frontend2
 
         steps:
             - name: Checkout repository
