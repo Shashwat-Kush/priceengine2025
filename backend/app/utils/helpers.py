@@ -57,64 +57,157 @@ def days_until(date_str: str) -> int:
     return max((target - today).days, 0)
 
 
-def default_seed_skus() -> List[Dict[str, Any]]:
+def default_seed_payload() -> Dict[str, List[Dict[str, Any]]]:
     now = utc_now()
-    seed_rows = [
-        ("sku-001", "boAt Airdopes 141", "Electronics", "Amazon", 1299, 720, 1199, 42, 6, "high", 7, 12, "high", "high"),
-        ("sku-002", "Prestige Iron 1000W", "Appliances", "Flipkart", 849, 490, 820, 18, 4, "medium", 10, 18, "medium", "medium"),
-        ("sku-003", "Mamaearth Vitamin C Serum", "Skincare", "Meesho", 349, 130, 299, 210, 22, "high", 5, 4, "high", "medium"),
-        ("sku-004", "Bajaj Mixer 500W", "Appliances", "Amazon", 2199, 1380, 2250, 55, 3, "low", 14, 35, "high", "high"),
-        ("sku-005", "Lakme Compact Powder", "Beauty", "Flipkart", 189, 78, 175, 8, 14, "high", 4, 3, "medium", "medium"),
-        ("sku-006", "Samsung 64GB Pen Drive", "Electronics", "Amazon", 599, 310, 579, 130, 9, "medium", 8, 6, "medium", "high"),
-        ("sku-007", "Haldi Kumkum Gift Set", "Gifting", "Meesho", 249, 92, 239, 340, 18, "medium", 3, 2, "high", "high"),
-        ("sku-008", "Philips Hair Dryer 1400W", "Personal Care", "Amazon", 1599, 950, 1650, 27, 2, "low", 12, 22, "medium", "high"),
-        ("sku-009", "Dove Body Wash 500ml", "Personal Care", "Flipkart", 279, 115, 259, 15, 20, "high", 5, 4, "low", "medium"),
-        ("sku-010", "Ceramic Mug Set of 6", "Home & Kitchen", "Meesho", 399, 185, 380, 76, 7, "medium", 6, 8, "medium", "medium"),
-        ("sku-011", "Fastrack Analog Watch", "Fashion", "Amazon", 1499, 820, 1399, 34, 4, "high", 10, 15, "high", "high"),
-        ("sku-012", "Saffola Honey 500g", "Food & Grocery", "Flipkart", 219, 110, 210, 95, 12, "medium", 4, 3, "low", "medium"),
-        ("sku-013", "Noise ColorFit Pro 4", "Electronics", "Amazon", 2999, 1650, 2799, 22, 5, "high", 8, 20, "high", "high"),
-        ("sku-014", "Ethnic Kurti Printed", "Fashion", "Meesho", 499, 180, 479, 145, 16, "high", 3, 5, "high", "high"),
-        ("sku-015", "Nescafe Classic 200g", "Food & Grocery", "Flipkart", 349, 195, 340, 60, 8, "low", 5, 4, "low", "medium"),
+
+    organizations = [
+        {
+            "_id": "org-001",
+            "name": "Demo Organization",
+            "created_at": now,
+            "updated_at": now,
+        }
     ]
 
-    docs: List[Dict[str, Any]] = []
-    for row in seed_rows:
-        (
-            sku_id,
-            name,
-            category,
-            marketplace,
-            current_price,
-            cost,
-            competitor_price,
-            inventory,
-            daily_demand,
-            sensitivity,
-            lead_time,
-            storage_cost,
-            festival_boost,
-            marketplace_strength,
-        ) = row
+    users = [
+        {
+            "_id": "user-001",
+            "org_id": "org-001",
+            "name": "Demo User",
+            "email": "demo@pricing.local",
+            "created_at": now,
+            "updated_at": now,
+        }
+    ]
 
-        docs.append(
+    sku_rows = [
+        ("sku-001", "boAt Airdopes 141", "Electronics", 8.0, "high", "high"),
+        ("sku-002", "Prestige Iron 1000W", "Appliances", 5.0, "medium", "medium"),
+        ("sku-003", "Mamaearth Vitamin C Serum", "Skincare", 28.0, "high", "high"),
+        ("sku-004", "Bajaj Mixer 500W", "Appliances", 3.0, "low", "high"),
+        ("sku-005", "Lakme Compact Powder", "Beauty", 18.0, "high", "medium"),
+    ]
+
+    skus: List[Dict[str, Any]] = []
+    listings: List[Dict[str, Any]] = []
+    competitors: List[Dict[str, Any]] = []
+
+    for idx, row in enumerate(sku_rows, start=1):
+        sku_id, name, category, base_demand, sensitivity, fest_boost = row
+        skus.append(
             {
                 "_id": sku_id,
+                "org_id": "org-001",
                 "name": name,
                 "category": category,
-                "marketplace": marketplace,
-                "current_price": float(current_price),
-                "cost": float(cost),
-                "competitor_price": float(competitor_price),
-                "inventory": int(inventory),
-                "daily_demand": float(daily_demand),
+                "base_demand": float(base_demand),
                 "price_sensitivity": normalize_sensitivity(sensitivity),
-                "lead_time_days": int(lead_time),
-                "storage_cost_per_unit": float(storage_cost),
-                "base_demand": float(max(daily_demand + 2, daily_demand * 1.2)),
-                "festival_boost_potential": normalize_sensitivity(festival_boost),
-                "marketplace_strength": normalize_sensitivity(marketplace_strength),
+                "festival_boost_potential": normalize_sensitivity(fest_boost),
                 "created_at": now,
                 "updated_at": now,
             }
         )
-    return docs
+
+        # Two listings per SKU for phase-1 marketplace separation.
+        amazon_listing_id = f"lst-{sku_id}-amazon"
+        flipkart_listing_id = f"lst-{sku_id}-flipkart"
+
+        base_price = 300 + idx * 210
+        base_cost = round(base_price * 0.58, 2)
+        base_inventory = 25 + idx * 9
+        base_daily_demand = max(2.0, base_demand * 0.65)
+
+        listings.append(
+            {
+                "_id": amazon_listing_id,
+                "sku_id": sku_id,
+                "org_id": "org-001",
+                "marketplace": "Amazon",
+                "current_price": float(base_price),
+                "cost": float(base_cost),
+                "inventory": int(base_inventory),
+                "daily_demand": float(round(base_daily_demand, 2)),
+                "lead_time_days": 7,
+                "storage_cost_per_unit": 10.0,
+                "created_at": now,
+                "updated_at": now,
+            }
+        )
+        listings.append(
+            {
+                "_id": flipkart_listing_id,
+                "sku_id": sku_id,
+                "org_id": "org-001",
+                "marketplace": "Flipkart",
+                "current_price": float(round(base_price * 0.97, 2)),
+                "cost": float(round(base_cost * 0.99, 2)),
+                "inventory": int(max(6, base_inventory - 8)),
+                "daily_demand": float(round(base_daily_demand * 0.9, 2)),
+                "lead_time_days": 8,
+                "storage_cost_per_unit": 9.0,
+                "created_at": now,
+                "updated_at": now,
+            }
+        )
+
+        for listing_id, list_price in [
+            (amazon_listing_id, float(base_price)),
+            (flipkart_listing_id, float(round(base_price * 0.97, 2))),
+        ]:
+            competitor_count = 3 if listing_id.endswith("amazon") else 2
+            for c_idx in range(competitor_count):
+                shift = (c_idx - 1) * 0.03
+                competitors.append(
+                    {
+                        "_id": f"cmp-{listing_id}-{c_idx + 1}",
+                        "listing_id": listing_id,
+                        "org_id": "org-001",
+                        "name": f"Competitor {c_idx + 1}",
+                        "price": float(round(list_price * (1.0 + shift), 2)),
+                        "rating": float(round(3.8 + (c_idx * 0.4), 1)),
+                        "shipping_days": int(2 + c_idx),
+                        "last_updated": now,
+                    }
+                )
+
+    festivals = [
+        {
+            "_id": "festival-diwali",
+            "org_id": "org-001",
+            "name": "Diwali",
+            "date": "2026-10-20",
+            "boost": 1.4,
+            "platform": ["Amazon", "Flipkart"],
+            "created_at": now,
+            "updated_at": now,
+        },
+        {
+            "_id": "festival-big-billion-days",
+            "org_id": "org-001",
+            "name": "Big Billion Days",
+            "date": "2026-04-14",
+            "boost": 1.6,
+            "platform": ["Flipkart"],
+            "created_at": now,
+            "updated_at": now,
+        },
+        {
+            "_id": "festival-independence-day-sale",
+            "org_id": "org-001",
+            "name": "Independence Day Sale",
+            "date": "2026-08-15",
+            "boost": 1.3,
+            "platform": ["Amazon", "Flipkart"],
+            "created_at": now,
+            "updated_at": now,
+        },
+    ]
+
+    return {
+        "organizations": organizations,
+        "users": users,
+        "skus": skus,
+        "listings": listings,
+        "competitors": competitors,
+        "festivals": festivals,
+    }

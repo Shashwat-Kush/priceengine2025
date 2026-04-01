@@ -13,7 +13,8 @@ def _price_step(min_price: int, max_price: int) -> int:
 def optimize_price(sku: dict) -> dict:
     current_price = float(sku["current_price"])
     cost = float(sku["cost"])
-    competitor_price = float(sku["competitor_price"])
+    min_comp_price = float(sku.get("min_comp_price", sku.get("competitor_price", current_price)))
+    avg_comp_price = float(sku.get("avg_comp_price", min_comp_price))
     base_demand = float(sku.get("base_demand", sku.get("daily_demand", 1)))
     sensitivity = str(sku.get("price_sensitivity", "medium"))
 
@@ -25,17 +26,24 @@ def optimize_price(sku: dict) -> dict:
     curve = []
 
     for price in range(min_price, max_price + 1, step):
-        demand = estimate_demand(price, competitor_price, base_demand, sensitivity)
+        demand = estimate_demand(
+            price=price,
+            base_demand=base_demand,
+            price_sensitivity=sensitivity,
+            min_comp_price=min_comp_price,
+            avg_comp_price=avg_comp_price,
+        )
         profit = (price - cost) * demand
         curve.append({"price": price, "profit": round(profit, 2)})
         if profit > best["profit"]:
             best = {"price": price, "profit": profit, "demand": demand}
 
     current_demand = estimate_demand(
-        current_price,
-        competitor_price,
-        base_demand,
-        sensitivity,
+        price=current_price,
+        base_demand=base_demand,
+        price_sensitivity=sensitivity,
+        min_comp_price=min_comp_price,
+        avg_comp_price=avg_comp_price,
     )
     current_profit = (current_price - cost) * current_demand
 
@@ -63,7 +71,15 @@ def simulate_price_change(
 ) -> dict:
     sensitivity = str(sku.get("price_sensitivity", "medium"))
     base_demand = float(sku.get("base_demand", sku.get("daily_demand", 1)))
-    demand = estimate_demand(price, competitor_price, base_demand, sensitivity)
+    min_comp_price = float(competitor_price)
+    avg_comp_price = float(sku.get("avg_comp_price", min_comp_price))
+    demand = estimate_demand(
+        price=price,
+        base_demand=base_demand,
+        price_sensitivity=sensitivity,
+        min_comp_price=min_comp_price,
+        avg_comp_price=avg_comp_price,
+    )
 
     if festival_boost:
         boost_band = str(sku.get("festival_boost_potential", "medium")).lower()

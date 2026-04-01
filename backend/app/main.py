@@ -21,7 +21,7 @@ from app.routes.festival_routes import router as festival_router
 from app.routes.inventory_routes import router as inventory_router
 from app.routes.pricing_routes import router as pricing_router
 from app.routes.sku_routes import router as sku_router
-from app.utils.helpers import default_seed_skus
+from app.utils.helpers import default_seed_payload
 
 
 def _frontend_origins() -> list[str]:
@@ -31,8 +31,27 @@ def _frontend_origins() -> list[str]:
 
 async def _seed_if_empty() -> None:
     db = await get_database()
-    if await db.skus.count_documents({}) == 0:
-        await db.skus.insert_many(default_seed_skus())
+
+    skus_count = await db.skus.count_documents({})
+    listings_count = await db.listings.count_documents({})
+
+    should_reset = False
+    if skus_count == 0:
+        should_reset = True
+    elif listings_count == 0:
+        # Legacy flat model detected; replace with normalized seed for phase-1.
+        should_reset = True
+
+    if not should_reset:
+        return
+
+    for collection_name in ["organizations", "users", "skus", "listings", "competitors", "festivals"]:
+        await db[collection_name].delete_many({})
+
+    payload = default_seed_payload()
+    for collection_name, docs in payload.items():
+        if docs:
+            await db[collection_name].insert_many(docs)
 
 
 @asynccontextmanager
