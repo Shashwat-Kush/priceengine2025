@@ -1,5 +1,4 @@
 import {
-	SKU,
 	DashboardKPIs,
 	RecommendedAction,
 	Alert,
@@ -8,7 +7,7 @@ import {
 	PortfolioDataPoint,
 } from "./types";
 
-export const SKUS: SKU[] = [
+export const SKUS = [
 	{
 		id: "sku-001",
 		name: "boAt Airdopes 141",
@@ -586,7 +585,7 @@ export function getCompetitorHistory(skuId: string): CompetitorHistory[] {
 	return result;
 }
 
-export function getProfitCurveData(sku: SKU) {
+export function getProfitCurveData(sku: (typeof SKUS)[number]) {
 	const prices = [];
 	const minPrice = Math.round(sku.cost * 1.05);
 	const maxPrice = Math.round(sku.currentPrice * 1.5);

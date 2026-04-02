@@ -10,8 +10,7 @@ from app.schemas.crud_schema import (
     competitor_doc_updates,
     competitor_to_frontend,
 )
-from app.schemas.sku_schema import sku_to_frontend
-from app.services.catalog_service import get_sku_bundle_scoped, to_engine_record
+from app.services.catalog_service import build_standard_response, get_sku_bundle_scoped, to_engine_record
 from app.services.competitor_service import competitor_analysis
 
 router = APIRouter(prefix="/competitor", tags=["Competitor Intelligence"])
@@ -149,7 +148,7 @@ async def get_competitor_view(
         competitors=bundle.get("primary_competitors", []),
     )
     return {
-        "sku": sku_to_frontend(engine_record),
+        **build_standard_response(bundle),
         "history": analysis["history"],
         "undercutFrequency": analysis["undercutFrequency"],
         "risk": analysis["risk"],

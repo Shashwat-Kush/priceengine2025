@@ -322,6 +322,9 @@ export default function FestivalsPage() {
 												<th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase">
 													SKU
 												</th>
+												<th className="text-left px-3 py-3 text-xs font-semibold text-slate-500 uppercase">
+													Marketplace
+												</th>
 												<th className="text-right px-3 py-3 text-xs font-semibold text-slate-500 uppercase">
 													Current Price
 												</th>
@@ -344,11 +347,25 @@ export default function FestivalsPage() {
 											{event.skuOpportunities.map(
 												(opp) => (
 													<tr
-														key={opp.skuId}
+														key={
+															opp.listingId ||
+															`${opp.skuId}:${opp.marketplace}`
+														}
 														className="border-b border-slate-100 last:border-0 hover:bg-slate-50"
 													>
 														<td className="px-5 py-3.5 font-medium text-slate-800">
 															{opp.skuName}
+														</td>
+														<td className="px-3 py-3.5">
+															{opp.marketplace ? (
+																<MarketplaceBadge
+																	value={
+																		opp.marketplace
+																	}
+																/>
+															) : (
+																"-"
+															)}
 														</td>
 														<td className="px-3 py-3.5 text-right font-mono text-slate-500">
 															₹{opp.currentPrice}

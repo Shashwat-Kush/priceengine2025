@@ -62,11 +62,11 @@ def default_seed_payload(org_id: str) -> Dict[str, List[Dict[str, Any]]]:
     seed_suffix = (org_id or "org").replace("org-", "")[:8] or "org"
 
     sku_rows = [
-        ("sku-001", "boAt Airdopes 141", "Electronics", 8.0, "high", "high"),
-        ("sku-002", "Prestige Iron 1000W", "Appliances", 5.0, "medium", "medium"),
-        ("sku-003", "Mamaearth Vitamin C Serum", "Skincare", 28.0, "high", "high"),
-        ("sku-004", "Bajaj Mixer 500W", "Appliances", 3.0, "low", "high"),
-        ("sku-005", "Lakme Compact Powder", "Beauty", 18.0, "high", "medium"),
+        ("sku-001", "boAt Airdopes 141", "Electronics", "medium", "high", "high"),
+        ("sku-002", "Prestige Iron 1000W", "Appliances", "low", "medium", "medium"),
+        ("sku-003", "Mamaearth Vitamin C Serum", "Skincare", "high", "high", "high"),
+        ("sku-004", "Bajaj Mixer 500W", "Appliances", "low", "low", "high"),
+        ("sku-005", "Lakme Compact Powder", "Beauty", "high", "high", "medium"),
     ]
 
     skus: List[Dict[str, Any]] = []
@@ -74,7 +74,7 @@ def default_seed_payload(org_id: str) -> Dict[str, List[Dict[str, Any]]]:
     competitors: List[Dict[str, Any]] = []
 
     for idx, row in enumerate(sku_rows, start=1):
-        base_sku_id, name, category, base_demand, sensitivity, fest_boost = row
+        base_sku_id, name, category, demand_scale, sensitivity, fest_sensitivity = row
         sku_id = f"{base_sku_id}-{seed_suffix}"
         skus.append(
             {
@@ -82,9 +82,9 @@ def default_seed_payload(org_id: str) -> Dict[str, List[Dict[str, Any]]]:
                 "org_id": org_id,
                 "name": name,
                 "category": category,
-                "base_demand": float(base_demand),
+                "demand_scale": demand_scale,
                 "price_sensitivity": normalize_sensitivity(sensitivity),
-                "festival_boost_potential": normalize_sensitivity(fest_boost),
+                "festival_sensitivity": normalize_sensitivity(fest_sensitivity),
                 "created_at": now,
                 "updated_at": now,
             }
@@ -97,7 +97,6 @@ def default_seed_payload(org_id: str) -> Dict[str, List[Dict[str, Any]]]:
         base_price = 300 + idx * 210
         base_cost = round(base_price * 0.58, 2)
         base_inventory = 25 + idx * 9
-        base_daily_demand = max(2.0, base_demand * 0.65)
 
         listings.append(
             {
@@ -105,10 +104,9 @@ def default_seed_payload(org_id: str) -> Dict[str, List[Dict[str, Any]]]:
                 "sku_id": sku_id,
                 "org_id": org_id,
                 "marketplace": "Amazon",
-                "current_price": float(base_price),
+                "price": float(base_price),
                 "cost": float(base_cost),
                 "inventory": int(base_inventory),
-                "daily_demand": float(round(base_daily_demand, 2)),
                 "lead_time_days": 7,
                 "storage_cost_per_unit": 10.0,
                 "created_at": now,
@@ -121,10 +119,9 @@ def default_seed_payload(org_id: str) -> Dict[str, List[Dict[str, Any]]]:
                 "sku_id": sku_id,
                 "org_id": org_id,
                 "marketplace": "Flipkart",
-                "current_price": float(round(base_price * 0.97, 2)),
+                "price": float(round(base_price * 0.97, 2)),
                 "cost": float(round(base_cost * 0.99, 2)),
                 "inventory": int(max(6, base_inventory - 8)),
-                "daily_demand": float(round(base_daily_demand * 0.9, 2)),
                 "lead_time_days": 8,
                 "storage_cost_per_unit": 9.0,
                 "created_at": now,

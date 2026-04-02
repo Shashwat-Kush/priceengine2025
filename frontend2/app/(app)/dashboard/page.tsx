@@ -74,8 +74,8 @@ export default function DashboardPage() {
 
 	const { kpis, recommendedActions, alerts } = data!;
 
-	const handleApply = (skuId: string) => {
-		setAppliedActions((prev) => new Set([...prev, skuId]));
+	const handleApply = (actionKey: string) => {
+		setAppliedActions((prev) => new Set([...prev, actionKey]));
 	};
 
 	return (
@@ -167,12 +167,13 @@ export default function DashboardPage() {
 							</thead>
 							<tbody>
 								{recommendedActions.map((action) => {
-									const applied = appliedActions.has(
-										action.skuId,
-									);
+									const actionKey = action.listingId
+										? `${action.skuId}:${action.listingId}`
+										: `${action.skuId}:${action.marketplace}`;
+									const applied = appliedActions.has(actionKey);
 									return (
 										<tr
-											key={action.skuId}
+											key={actionKey}
 											className="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors"
 										>
 											<td className="px-5 py-3.5">
@@ -217,7 +218,7 @@ export default function DashboardPage() {
 													<button
 														onClick={() =>
 															handleApply(
-																action.skuId,
+																actionKey,
 															)
 														}
 														disabled={applied}

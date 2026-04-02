@@ -46,6 +46,11 @@ async def connect_to_mongo() -> None:
     _client = AsyncIOMotorClient(_mongo_uri(), serverSelectionTimeoutMS=5000)
     _database = _resolve_database(_client)
     await _database.command("ping")
+    await _database.listings.create_index(
+        [("org_id", 1), ("sku_id", 1), ("marketplace", 1)],
+        unique=True,
+        name="uniq_listing_org_sku_marketplace",
+    )
 
 
 async def close_mongo_connection() -> None:

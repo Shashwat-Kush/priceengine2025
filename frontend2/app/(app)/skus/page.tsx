@@ -1,76 +1,46 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-	createSKU,
-	deleteSKU,
-	getSKUs,
-	updateSKU,
-} from "@/lib/services";
-import { SKU, SKUCreateInput } from "@/lib/types";
-import {
-	MarketplaceBadge,
-	InventoryBadge,
-	RiskIndicator,
-} from "@/components/Badges";
+import { createSKU, deleteSKU, getSKUs, updateSKU } from "@/lib/services";
+import { EngineRecord, SKUCreateInput, SKUProfile } from "@/lib/types";
 import Link from "next/link";
-import { Search, ChevronRight, Filter } from "lucide-react";
+import { ChevronRight, Filter, Search } from "lucide-react";
 
 const defaultForm: SKUCreateInput = {
 	id: "",
 	name: "",
 	category: "General",
-	marketplace: "Amazon",
-	currentPrice: 100,
-	cost: 50,
-	competitorPrice: 100,
-	inventory: 0,
-	dailyDemand: 1,
-	leadTimeDays: 7,
-	storageCostPerUnit: 5,
-	baseDemand: 1,
+	demandScale: "medium",
 	priceSensitivity: "medium",
-	festivalBoostPotential: "medium",
+	festivalSensitivity: "medium",
 };
 
-function normalizeSensitivity(
-	value: string,
-): "high" | "medium" | "low" {
-	const normalized = value.toLowerCase();
-	if (normalized === "high" || normalized === "low") return normalized;
-	return "medium";
-}
-
-function mapSkuToForm(sku: SKU): SKUCreateInput {
+function mapSkuToForm(sku: SKUProfile): SKUCreateInput {
 	return {
 		id: sku.id,
 		name: sku.name,
 		category: sku.category,
-		marketplace: sku.marketplace,
-		currentPrice: sku.currentPrice,
-		cost: sku.cost,
-		competitorPrice: sku.competitorPrice,
-		inventory: sku.inventory,
-		dailyDemand: sku.dailyDemand,
-		leadTimeDays: sku.leadTimeDays,
-		storageCostPerUnit: sku.storageCostPerUnit,
-		baseDemand: sku.baseDemand,
-		priceSensitivity: normalizeSensitivity(sku.priceSensitivity),
-		festivalBoostPotential: normalizeSensitivity(
-			sku.festivalBoostPotential,
-		),
+		demandScale: sku.demandScale.toLowerCase() as "low" | "medium" | "high",
+		priceSensitivity: sku.priceSensitivity.toLowerCase() as
+			| "low"
+			| "medium"
+			| "high",
+		festivalSensitivity: sku.festivalSensitivity.toLowerCase() as
+			| "low"
+			| "medium"
+			| "high",
 	};
 }
 
 export default function SKUsPage() {
-	const [skus, setSkus] = useState<SKU[]>([]);
+	const [records, setRecords] = useState<EngineRecord[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [submitting, setSubmitting] = useState(false);
+
 	const [search, setSearch] = useState("");
-	const [filterMarketplace, setFilterMarketplace] = useState<string>("");
-	const [filterMargin, setFilterMargin] = useState<string>("");
-	const [filterStatus, setFilterStatus] = useState<string>("");
-	const [filterRisk, setFilterRisk] = useState<string>("");
+	const [filterDemand, setFilterDemand] = useState("");
+	const [filterPriceSensitivity, setFilterPriceSensitivity] = useState("");
+
 	const [modalMode, setModalMode] = useState<"create" | "edit" | null>(null);
 	const [form, setForm] = useState<SKUCreateInput>(defaultForm);
 	const [toast, setToast] = useState<{
@@ -86,13 +56,12 @@ export default function SKUsPage() {
 	const loadSkus = async () => {
 		setLoading(true);
 		const data = await getSKUs();
-		setSkus(data);
+		setRecords(data);
 		setLoading(false);
 	};
 
 	useEffect(() => {
 		loadSkus();
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	const openCreateModal = () => {
@@ -100,7 +69,7 @@ export default function SKUsPage() {
 		setModalMode("create");
 	};
 
-	const openEditModal = (sku: SKU) => {
+	const openEditModal = (sku: SKUProfile) => {
 		setForm(mapSkuToForm(sku));
 		setModalMode("edit");
 	};
@@ -130,17 +99,9 @@ export default function SKUsPage() {
 				await updateSKU(form.id, {
 					name: form.name.trim(),
 					category: form.category.trim(),
-					baseDemand: form.baseDemand,
+					demandScale: form.demandScale,
 					priceSensitivity: form.priceSensitivity,
-					festivalBoostPotential: form.festivalBoostPotential,
-					marketplace: form.marketplace,
-					currentPrice: form.currentPrice,
-					cost: form.cost,
-					competitorPrice: form.competitorPrice,
-					inventory: form.inventory,
-					dailyDemand: form.dailyDemand,
-					leadTimeDays: form.leadTimeDays,
-					storageCostPerUnit: form.storageCostPerUnit,
+					festivalSensitivity: form.festivalSensitivity,
 				});
 				showToast("success", "SKU updated successfully.");
 			}
@@ -171,31 +132,19 @@ export default function SKUsPage() {
 		}
 	};
 
-	const filtered = skus.filter((sku) => {
+	const filtered = records.filter((record) => {
+		const sku = record.sku;
 		const matchSearch =
 			!search ||
 			sku.name.toLowerCase().includes(search.toLowerCase()) ||
 			sku.id.toLowerCase().includes(search.toLowerCase()) ||
 			sku.category.toLowerCase().includes(search.toLowerCase());
-		const matchMarketplace =
-			!filterMarketplace || sku.marketplace === filterMarketplace;
-		const matchMargin =
-			!filterMargin ||
-			(filterMargin === "high" && sku.margin >= 55) ||
-			(filterMargin === "medium" &&
-				sku.margin >= 40 &&
-				sku.margin < 55) ||
-			(filterMargin === "low" && sku.margin < 40);
-		const matchStatus =
-			!filterStatus || sku.inventoryStatus === filterStatus;
-		const matchRisk = !filterRisk || sku.competitorRisk === filterRisk;
-		return (
-			matchSearch &&
-			matchMarketplace &&
-			matchMargin &&
-			matchStatus &&
-			matchRisk
-		);
+		const matchDemand = !filterDemand || sku.demandScale === filterDemand;
+		const matchSensitivity =
+			!filterPriceSensitivity ||
+			sku.priceSensitivity === filterPriceSensitivity;
+
+		return matchSearch && matchDemand && matchSensitivity;
 	});
 
 	return (
@@ -208,7 +157,6 @@ export default function SKUsPage() {
 				</div>
 			)}
 
-			{/* Search + Filters */}
 			<div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4">
 				<div className="flex flex-wrap gap-3 items-center">
 					<button
@@ -224,7 +172,7 @@ export default function SKUsPage() {
 						/>
 						<input
 							type="text"
-							placeholder="Search SKU, category…"
+							placeholder="Search SKU, category..."
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
 							className="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -235,71 +183,33 @@ export default function SKUsPage() {
 						<span className="text-xs font-medium">Filters:</span>
 					</div>
 					<select
-						value={filterMarketplace}
-						onChange={(e) => setFilterMarketplace(e.target.value)}
-						className="border border-slate-300 rounded-lg text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+						value={filterDemand}
+						onChange={(e) => setFilterDemand(e.target.value)}
+						className="border border-slate-300 rounded-lg text-sm px-3 py-2 bg-white"
 					>
-						<option value="">All Platforms</option>
-						<option value="Amazon">Amazon</option>
-						<option value="Flipkart">Flipkart</option>
-						<option value="Meesho">Meesho</option>
-					</select>
-					<select
-						value={filterMargin}
-						onChange={(e) => setFilterMargin(e.target.value)}
-						className="border border-slate-300 rounded-lg text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-					>
-						<option value="">All Margins</option>
-						<option value="high">High (≥55%)</option>
-						<option value="medium">Medium (40–55%)</option>
-						<option value="low">Low (&lt;40%)</option>
-					</select>
-					<select
-						value={filterStatus}
-						onChange={(e) => setFilterStatus(e.target.value)}
-						className="border border-slate-300 rounded-lg text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-					>
-						<option value="">All Inventory</option>
-						<option value="Critical">Critical</option>
+						<option value="">All Demand Scales</option>
 						<option value="Low">Low</option>
-						<option value="Healthy">Healthy</option>
-						<option value="Overstock">Overstock</option>
+						<option value="Medium">Medium</option>
+						<option value="High">High</option>
 					</select>
 					<select
-						value={filterRisk}
-						onChange={(e) => setFilterRisk(e.target.value)}
-						className="border border-slate-300 rounded-lg text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+						value={filterPriceSensitivity}
+						onChange={(e) =>
+							setFilterPriceSensitivity(e.target.value)
+						}
+						className="border border-slate-300 rounded-lg text-sm px-3 py-2 bg-white"
 					>
-						<option value="">All Risk Levels</option>
-						<option value="High">High Risk</option>
-						<option value="Medium">Medium Risk</option>
-						<option value="Low">Low Risk</option>
+						<option value="">All Price Sensitivities</option>
+						<option value="Low">Low</option>
+						<option value="Medium">Medium</option>
+						<option value="High">High</option>
 					</select>
-					{(filterMarketplace ||
-						filterMargin ||
-						filterStatus ||
-						filterRisk ||
-						search) && (
-						<button
-							onClick={() => {
-								setSearch("");
-								setFilterMarketplace("");
-								setFilterMargin("");
-								setFilterStatus("");
-								setFilterRisk("");
-							}}
-							className="text-xs text-red-600 hover:underline"
-						>
-							Clear all
-						</button>
-					)}
 				</div>
 				<p className="text-xs text-slate-400 mt-2">
-					{filtered.length} of {skus.length} SKUs
+					{filtered.length} of {records.length} SKUs
 				</p>
 			</div>
 
-			{/* Table */}
 			<div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
 				{loading ? (
 					<div className="flex items-center justify-center h-60">
@@ -309,9 +219,6 @@ export default function SKUsPage() {
 					<div className="text-center py-16 text-slate-400">
 						<p className="font-medium">
 							No SKUs match your filters.
-						</p>
-						<p className="text-xs mt-1">
-							Try adjusting your search or filter criteria.
 						</p>
 					</div>
 				) : (
@@ -323,118 +230,79 @@ export default function SKUsPage() {
 										SKU / Category
 									</th>
 									<th className="text-left px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
-										Platform
-									</th>
-									<th className="text-right px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
-										Price
-									</th>
-									<th className="text-right px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
-										Cost
-									</th>
-									<th className="text-right px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
-										Margin
-									</th>
-									<th className="text-right px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
-										Comp. Price
-									</th>
-									<th className="text-right px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
-										Stock
+										Demand Scale
 									</th>
 									<th className="text-left px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
-										Inv. Status
+										Price Sensitivity
 									</th>
 									<th className="text-left px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
-										Comp. Risk
+										Festival Sensitivity
 									</th>
 									<th className="px-3 py-3"></th>
 								</tr>
 							</thead>
 							<tbody>
-								{filtered.map((sku) => (
-									<tr
-										key={sku.id}
-										className="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors cursor-pointer"
-									>
-										<td className="px-5 py-3.5">
-											<Link
-												href={`/skus/${sku.id}`}
-												className="block"
-											>
-												<p className="font-medium text-slate-800 hover:text-blue-600 transition-colors">
-													{sku.name}
-												</p>
-												<p className="text-xs text-slate-400 mt-0.5">
-													{sku.category} · {sku.id}
-												</p>
-											</Link>
-										</td>
-										<td className="px-3 py-3.5">
-											<MarketplaceBadge
-												value={sku.marketplace}
-											/>
-										</td>
-										<td className="px-3 py-3.5 text-right font-mono text-slate-700 font-medium">
-											₹{sku.currentPrice}
-										</td>
-										<td className="px-3 py-3.5 text-right font-mono text-slate-500">
-											₹{sku.cost}
-										</td>
-										<td className="px-3 py-3.5 text-right">
-											<span
-												className={`font-semibold ${sku.margin >= 55 ? "text-emerald-600" : sku.margin >= 40 ? "text-blue-600" : "text-orange-600"}`}
-											>
-												{sku.margin.toFixed(1)}%
-											</span>
-										</td>
-										<td className="px-3 py-3.5 text-right font-mono">
-											<span
-												className={
-													sku.competitorPrice <
-													sku.currentPrice
-														? "text-red-600 font-semibold"
-														: "text-slate-500"
-												}
-											>
-												₹{sku.competitorPrice}
-											</span>
-										</td>
-										<td className="px-3 py-3.5 text-right text-slate-600 font-mono">
-											{sku.inventory}
-										</td>
-										<td className="px-3 py-3.5">
-											<InventoryBadge
-												value={sku.inventoryStatus}
-											/>
-										</td>
-										<td className="px-3 py-3.5">
-											<RiskIndicator
-												value={sku.competitorRisk}
-											/>
-										</td>
-										<td className="px-3 py-3.5">
-											<div className="flex items-center gap-2 justify-end">
-												<button
-													onClick={() => openEditModal(sku)}
-													className="text-xs text-blue-600 hover:underline"
-												>
-													Edit
-												</button>
-												<button
-													onClick={() => onDeleteSku(sku.id)}
-													className="text-xs text-red-600 hover:underline"
-												>
-													Delete
-												</button>
+								{filtered.map((record) => {
+									const sku = record.sku;
+									return (
+										<tr
+											key={sku.id}
+											className="border-b border-slate-100 last:border-0 hover:bg-slate-50"
+										>
+											<td className="px-5 py-3.5">
 												<Link
 													href={`/skus/${sku.id}`}
-													className="text-blue-500 hover:text-blue-700 transition-colors"
+													className="block"
 												>
-													<ChevronRight size={16} />
+													<p className="font-medium text-slate-800 hover:text-blue-600">
+														{sku.name}
+													</p>
+													<p className="text-xs text-slate-400 mt-0.5">
+														{sku.category} ·{" "}
+														{sku.id}
+													</p>
 												</Link>
-											</div>
-										</td>
-									</tr>
-								))}
+											</td>
+											<td className="px-3 py-3.5 text-slate-700 font-medium">
+												{sku.demandScale}
+											</td>
+											<td className="px-3 py-3.5 text-slate-700">
+												{sku.priceSensitivity}
+											</td>
+											<td className="px-3 py-3.5 text-slate-700">
+												{sku.festivalSensitivity}
+											</td>
+											<td className="px-3 py-3.5">
+												<div className="flex items-center gap-2 justify-end">
+													<button
+														onClick={() =>
+															openEditModal(sku)
+														}
+														className="text-xs text-blue-600 hover:underline"
+													>
+														Edit
+													</button>
+													<button
+														onClick={() =>
+															onDeleteSku(sku.id)
+														}
+														className="text-xs text-red-600 hover:underline"
+													>
+														Delete
+													</button>
+													<Link
+														href={`/skus/${sku.id}`}
+														className="text-blue-500 hover:text-blue-700"
+													>
+														<ChevronRight
+															size={16}
+														/>
+													</Link>
+												</div>
+											</td>
+										</tr>
+									);
+								})}
 							</tbody>
 						</table>
 					</div>
@@ -443,10 +311,12 @@ export default function SKUsPage() {
 
 			{modalMode && (
 				<div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
-					<div className="w-full max-w-3xl bg-white rounded-xl border border-slate-200 shadow-xl p-5 space-y-4 max-h-[92vh] overflow-auto">
+					<div className="w-full max-w-2xl bg-white rounded-xl border border-slate-200 shadow-xl p-5 space-y-4">
 						<div className="flex items-center justify-between">
 							<h3 className="text-lg font-semibold text-slate-800">
-								{modalMode === "create" ? "Create SKU" : "Edit SKU"}
+								{modalMode === "create"
+									? "Create SKU"
+									: "Edit SKU"}
 							</h3>
 							<button
 								onClick={closeModal}
@@ -498,48 +368,25 @@ export default function SKUsPage() {
 								/>
 							</label>
 							<label className="text-sm text-slate-600">
-								Marketplace
+								Demand Scale
 								<select
-									value={form.marketplace}
+									value={form.demandScale}
 									onChange={(e) =>
 										setForm((prev) => ({
 											...prev,
-											marketplace: e.target.value,
+											demandScale: e.target.value as
+												| "low"
+												| "medium"
+												| "high",
 										}))
 									}
 									className="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
 								>
-									<option value="Amazon">Amazon</option>
-									<option value="Flipkart">Flipkart</option>
-									<option value="Meesho">Meesho</option>
+									<option value="low">Low</option>
+									<option value="medium">Medium</option>
+									<option value="high">High</option>
 								</select>
 							</label>
-							{[
-								["Current Price", "currentPrice"],
-								["Cost", "cost"],
-								["Competitor Price", "competitorPrice"],
-								["Inventory", "inventory"],
-								["Daily Demand", "dailyDemand"],
-								["Lead Time Days", "leadTimeDays"],
-								["Storage Cost/Unit", "storageCostPerUnit"],
-								["Base Demand", "baseDemand"],
-							].map(([label, key]) => (
-								<label key={key} className="text-sm text-slate-600">
-									{label}
-									<input
-										type="number"
-										value={form[key as keyof SKUCreateInput] as number}
-										onChange={(e) =>
-											setForm((prev) => ({
-												...prev,
-												[key]: Number(e.target.value),
-											}))
-										}
-										className="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
-									/>
-								</label>
-							))}
-
 							<label className="text-sm text-slate-600">
 								Price Sensitivity
 								<select
@@ -548,36 +395,37 @@ export default function SKUsPage() {
 										setForm((prev) => ({
 											...prev,
 											priceSensitivity: e.target.value as
-												| "high"
+												| "low"
 												| "medium"
-												| "low",
+												| "high",
 										}))
 									}
 									className="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
 								>
-									<option value="high">High</option>
-									<option value="medium">Medium</option>
 									<option value="low">Low</option>
+									<option value="medium">Medium</option>
+									<option value="high">High</option>
 								</select>
 							</label>
 							<label className="text-sm text-slate-600">
-								Festival Boost Potential
+								Festival Sensitivity
 								<select
-									value={form.festivalBoostPotential}
+									value={form.festivalSensitivity}
 									onChange={(e) =>
 										setForm((prev) => ({
 											...prev,
-											festivalBoostPotential: e.target.value as
-												| "high"
+											festivalSensitivity: e.target
+												.value as
+												| "low"
 												| "medium"
-												| "low",
+												| "high",
 										}))
 									}
 									className="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
 								>
-									<option value="high">High</option>
-									<option value="medium">Medium</option>
 									<option value="low">Low</option>
+									<option value="medium">Medium</option>
+									<option value="high">High</option>
 								</select>
 							</label>
 						</div>

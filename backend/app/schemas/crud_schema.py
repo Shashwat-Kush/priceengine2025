@@ -2,7 +2,7 @@ from datetime import date
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.utils.helpers import utc_now
 
@@ -13,11 +13,10 @@ class ListingCreate(BaseModel):
     id: Optional[str] = Field(default=None, min_length=3, max_length=160)
     sku_id: str = Field(min_length=1, max_length=120)
     marketplace: str = Field(min_length=2, max_length=40)
-    current_price: float = Field(gt=0)
+    price: float = Field(gt=0)
     cost: float = Field(ge=0)
     inventory: int = Field(ge=0)
-    daily_demand: float = Field(ge=0)
-    lead_time_days: int = Field(ge=1, le=180)
+    lead_time_days: int = Field(ge=0, le=180)
     storage_cost_per_unit: float = Field(ge=0)
 
     @field_validator("id", "sku_id", mode="before")
@@ -32,17 +31,22 @@ class ListingCreate(BaseModel):
     def _trim_marketplace(cls, value: str) -> str:
         return str(value).strip()
 
+    @model_validator(mode="after")
+    def _price_gt_cost(self):
+        if self.price <= self.cost:
+            raise ValueError("price must be greater than cost")
+        return self
+
 
 class ListingUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     sku_id: Optional[str] = Field(default=None, min_length=1, max_length=120)
     marketplace: Optional[str] = Field(default=None, min_length=2, max_length=40)
-    current_price: Optional[float] = Field(default=None, gt=0)
+    price: Optional[float] = Field(default=None, gt=0)
     cost: Optional[float] = Field(default=None, ge=0)
     inventory: Optional[int] = Field(default=None, ge=0)
-    daily_demand: Optional[float] = Field(default=None, ge=0)
-    lead_time_days: Optional[int] = Field(default=None, ge=1, le=180)
+    lead_time_days: Optional[int] = Field(default=None, ge=0, le=180)
     storage_cost_per_unit: Optional[float] = Field(default=None, ge=0)
 
     @field_validator("sku_id", "marketplace", mode="before")
@@ -51,6 +55,12 @@ class ListingUpdate(BaseModel):
         if value is None:
             return None
         return str(value).strip()
+
+    @model_validator(mode="after")
+    def _price_gt_cost_when_present(self):
+        if self.price is not None and self.cost is not None and self.price <= self.cost:
+            raise ValueError("price must be greater than cost")
+        return self
 
 
 class CompetitorCreate(BaseModel):
@@ -168,10 +178,9 @@ def listing_doc_from_create(payload: ListingCreate, org_id: str) -> Dict[str, An
         "org_id": org_id,
         "sku_id": data["sku_id"],
         "marketplace": data["marketplace"],
-        "current_price": float(data["current_price"]),
+        "price": float(data["price"]),
         "cost": float(data["cost"]),
         "inventory": int(data["inventory"]),
-        "daily_demand": float(data["daily_demand"]),
         "lead_time_days": int(data["lead_time_days"]),
         "storage_cost_per_unit": float(data["storage_cost_per_unit"]),
         "created_at": now,
@@ -235,14 +244,14 @@ def festival_doc_updates(payload: FestivalUpdate) -> Dict[str, Any]:
 
 
 def listing_to_frontend(doc: Dict[str, Any]) -> Dict[str, Any]:
+    price = float(doc.get("price", doc.get("current_price", 0.0)))
     return {
         "id": str(doc.get("_id", "")),
         "skuId": str(doc.get("sku_id", "")),
         "marketplace": str(doc.get("marketplace", "Amazon")),
-        "currentPrice": float(doc.get("current_price", 0.0)),
+        "price": price,
         "cost": float(doc.get("cost", 0.0)),
         "inventory": int(doc.get("inventory", 0)),
-        "dailyDemand": float(doc.get("daily_demand", 0.0)),
         "leadTimeDays": int(doc.get("lead_time_days", 7)),
         "storageCostPerUnit": float(doc.get("storage_cost_per_unit", 0.0)),
     }

@@ -10,7 +10,8 @@ from app.schemas.crud_schema import (
     festival_doc_updates,
     festival_to_frontend,
 )
-from app.services.catalog_service import list_sku_bundles, to_engine_record
+from app.schemas.sku_schema import map_base_demand_to_scale, normalize_demand_scale
+from app.services.catalog_service import compute_listing_metrics, list_sku_bundles
 from app.services.demand_service import estimate_demand
 from app.utils.helpers import days_until
 
@@ -84,58 +85,74 @@ async def get_festival_plan(
 ):
     org_id = str(current_user["org_id"])
     bundles = await list_sku_bundles(db, org_id=org_id)
-    records = [to_engine_record(bundle) for bundle in bundles]
     festivals = await db.festivals.find({"org_id": org_id}).sort("_id", 1).to_list(length=None)
 
     events = []
     for fest in festivals:
+        allowed_platforms = {str(p).strip().lower() for p in fest.get("platform", []) if str(p).strip()}
         opportunities = []
-        for sku in records:
-            current_price = float(sku.get("current_price", 0.0))
-            cost = float(sku.get("cost", 0.0))
-            min_comp_price = float(sku.get("min_comp_price", current_price))
-            avg_comp_price = float(sku.get("avg_comp_price", min_comp_price))
-            base_demand = float(sku.get("base_demand", sku.get("daily_demand", 1.0)))
-            sensitivity = str(sku.get("price_sensitivity", "medium"))
+        for bundle in bundles:
+            sku_doc = bundle.get("sku", {})
+            listings = bundle.get("listings", [])
+            competitors_by_listing = bundle.get("competitors_by_listing", {})
 
-            suggested_price = round(current_price * (0.95 if float(fest["boost"]) >= 1.5 else 0.97), 2)
+            for listing in listings:
+                marketplace = str(listing.get("marketplace", "")).strip()
+                if allowed_platforms and marketplace.lower() not in allowed_platforms:
+                    continue
 
-            demand_normal = estimate_demand(
-                price=current_price,
-                base_demand=base_demand,
-                price_sensitivity=sensitivity,
-                min_comp_price=min_comp_price,
-                avg_comp_price=avg_comp_price,
-            )
-            demand_festival = estimate_demand(
-                price=suggested_price,
-                base_demand=base_demand,
-                price_sensitivity=sensitivity,
-                min_comp_price=min_comp_price,
-                avg_comp_price=avg_comp_price,
-            ) * float(fest["boost"])
+                current_price = float(listing.get("price", listing.get("current_price", 0.0)))
+                cost = float(listing.get("cost", 0.0))
+                lid = str(listing.get("_id", ""))
+                listing_competitors = competitors_by_listing.get(lid, [])
 
-            expected_units = int(round(demand_festival * 30))
-            inventory_required = expected_units
+                current_metrics = compute_listing_metrics(
+                    sku_doc,
+                    listing,
+                    listing_competitors,
+                    festival_multiplier=1.0,
+                )
+                min_comp_price = float(current_metrics["min_comp_price"])
+                avg_comp_price = float(current_metrics["avg_comp_price"])
 
-            current_profit = (current_price - cost) * demand_normal * 30
-            festival_profit = (suggested_price - cost) * expected_units
-            profit_impact = round(festival_profit - current_profit, 2)
+                demand_scale = normalize_demand_scale(
+                    str(sku_doc.get("demand_scale") or map_base_demand_to_scale(sku_doc.get("base_demand")))
+                )
+                sensitivity = str(sku_doc.get("price_sensitivity", "medium"))
 
-            if profit_impact <= 0:
-                continue
+                suggested_price = round(current_price * (0.95 if float(fest["boost"]) >= 1.5 else 0.97), 2)
+                demand_festival = estimate_demand(
+                    price=suggested_price,
+                    demand_scale=demand_scale,
+                    price_sensitivity=sensitivity,
+                    avg_comp_price=avg_comp_price,
+                    min_comp_price=min_comp_price,
+                    festival_multiplier=float(fest["boost"]),
+                )
 
-            opportunities.append(
-                {
-                    "skuId": str(sku["_id"]),
-                    "skuName": sku["name"],
-                    "suggestedPrice": suggested_price,
-                    "currentPrice": current_price,
-                    "expectedUnits": expected_units,
-                    "inventoryRequired": inventory_required,
-                    "profitImpact": profit_impact,
-                }
-            )
+                expected_units = int(round(demand_festival * 30))
+                inventory_required = expected_units
+
+                current_profit = float(current_metrics["profit"]) * 30
+                festival_profit = (suggested_price - cost) * expected_units
+                profit_impact = round(festival_profit - current_profit, 2)
+
+                if profit_impact <= 0:
+                    continue
+
+                opportunities.append(
+                    {
+                        "skuId": str(sku_doc.get("_id", "")),
+                        "listingId": lid,
+                        "marketplace": marketplace,
+                        "skuName": sku_doc.get("name", "Unnamed SKU"),
+                        "suggestedPrice": suggested_price,
+                        "currentPrice": current_price,
+                        "expectedUnits": expected_units,
+                        "inventoryRequired": inventory_required,
+                        "profitImpact": profit_impact,
+                    }
+                )
 
         opportunities.sort(key=lambda row: row["profitImpact"], reverse=True)
         events.append(

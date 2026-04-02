@@ -4,7 +4,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.dependencies.auth import get_current_user
 from app.db.mongo import get_database
 from app.schemas.sku_schema import PriceSimulationRequest
-from app.services.catalog_service import get_sku_bundle_scoped, to_engine_record
+from app.services.catalog_service import build_standard_response, get_sku_bundle_scoped, to_engine_record
 from app.services.pricing_service import optimize_price, simulate_price_change
 
 router = APIRouter(prefix="/pricing", tags=["Pricing Engine"])
@@ -24,8 +24,8 @@ async def get_pricing_analysis(
     engine_record = to_engine_record(bundle)
     pricing = optimize_price(engine_record)
     return {
-        "skuId": sku_id,
-        **pricing,
+        **build_standard_response(bundle),
+        "optimization": pricing,
     }
 
 

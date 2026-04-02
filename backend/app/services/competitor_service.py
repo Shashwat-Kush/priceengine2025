@@ -8,7 +8,7 @@ def competitor_history_for_listing(listing: dict, competitors: list[dict]) -> li
     sku_id = str(listing.get("sku_id", "sku"))
     seed = sum(ord(ch) for ch in sku_id)
 
-    current_price = float(listing.get("current_price", 0.0))
+    current_price = float(listing.get("price", listing.get("current_price", 0.0)))
     cost = float(listing.get("cost", 0.0))
 
     if competitors:
@@ -40,8 +40,8 @@ def competitor_history_for_listing(listing: dict, competitors: list[dict]) -> li
 
 
 def competitor_analysis(engine_record: dict, listing: dict, competitors: list[dict]) -> dict:
-    current_price = float(engine_record.get("current_price", 0.0))
-    min_comp_price = float(engine_record.get("min_comp_price", engine_record.get("competitor_price", current_price)))
+    current_price = float(engine_record.get("price", engine_record.get("current_price", 0.0)))
+    min_comp_price = float(engine_record.get("min_comp_price", current_price))
     sensitivity = str(engine_record.get("price_sensitivity", "medium"))
 
     history = competitor_history_for_listing(listing, competitors)

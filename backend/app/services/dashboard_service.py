@@ -34,14 +34,15 @@ def build_dashboard_payload(skus: list[dict]) -> dict:
     for idx, sku in enumerate(skus, start=1):
         pricing = optimize_price(sku)
 
-        daily_demand = float(sku.get("daily_demand", 0))
-        current_price = float(sku["current_price"])
+        demand = float(sku.get("demand", 0))
+        current_price = float(sku.get("price", sku.get("current_price", 0.0)))
         cost = float(sku["cost"])
         inventory = int(sku.get("inventory", 0))
-        competitor_price = float(sku.get("competitor_price", current_price))
+        competitor_price = float(sku.get("min_comp_price", current_price))
+        listing_id = str(sku.get("listing_id", ""))
 
-        monthly_revenue = current_price * daily_demand * 30
-        monthly_profit = (current_price - cost) * daily_demand * 30
+        monthly_revenue = current_price * demand * 30
+        monthly_profit = (current_price - cost) * demand * 30
 
         total_revenue += monthly_revenue
         total_profit += monthly_profit
@@ -56,6 +57,7 @@ def build_dashboard_payload(skus: list[dict]) -> dict:
             recommendations.append(
                 {
                     "skuId": str(sku["_id"]),
+                    "listingId": listing_id,
                     "skuName": sku["name"],
                     "marketplace": sku["marketplace"],
                     "currentPrice": current_price,
@@ -66,7 +68,7 @@ def build_dashboard_payload(skus: list[dict]) -> dict:
                 }
             )
 
-        status = compute_inventory_status(inventory, daily_demand)
+        status = compute_inventory_status(inventory, demand)
         if status in {"Critical", "Low"}:
             low_inventory_count += 1
             alerts.append(
@@ -76,7 +78,7 @@ def build_dashboard_payload(skus: list[dict]) -> dict:
                     "high" if status == "Critical" else "medium",
                     str(sku["_id"]),
                     sku["name"],
-                    f"Inventory is {inventory} units with daily demand {daily_demand:.1f}. Reorder suggested.",
+                    f"Inventory is {inventory} units with computed demand {demand:.1f}. Reorder suggested.",
                 )
             )
 
@@ -94,7 +96,7 @@ def build_dashboard_payload(skus: list[dict]) -> dict:
                 )
             )
 
-        if str(sku.get("festival_boost_potential", "medium")).lower() == "high" and inventory > daily_demand * 10:
+        if str(sku.get("festival_sensitivity", "medium")).lower() == "high" and inventory > demand * 10:
             alerts.append(
                 _alert_row(
                     f"alert-fest-{idx}",

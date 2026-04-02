@@ -62,9 +62,16 @@ export default function PortfolioPage() {
 		name,
 		value,
 	}));
+	const uniqueSkuCount = new Set(data.map((d) => d.skuId)).size;
 
 	// Bar chart data sorted by profit descending
-	const barData = [...data].sort((a, b) => b.profit - a.profit);
+	const barData = [...data]
+		.sort((a, b) => b.profit - a.profit)
+		.map((row) => ({
+			...row,
+			chartLabel: `${row.name} (${row.marketplace})`,
+			uniqueKey: `${row.skuId}:${row.marketplace}`,
+		}));
 
 	const sensitivityLabels = ["", "Low", "Medium", "High"];
 
@@ -75,14 +82,16 @@ export default function PortfolioPage() {
 				<div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4">
 					<p className="text-xs text-slate-500 mb-1">Total SKUs</p>
 					<p className="text-2xl font-bold text-slate-800">
-						{data.length}
+						{uniqueSkuCount}
 					</p>
 				</div>
 				<div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4">
 					<p className="text-xs text-slate-500 mb-1">Avg Margin</p>
 					<p className="text-2xl font-bold text-emerald-600">
-						{(
-							data.reduce((s, d) => s + d.margin, 0) / data.length
+						{(data.length
+							? data.reduce((s, d) => s + d.margin, 0) /
+								data.length
+							: 0
 						).toFixed(1)}
 						%
 					</p>
@@ -202,7 +211,7 @@ export default function PortfolioPage() {
 						Marketplace Mix
 					</h3>
 					<p className="text-xs text-slate-500 mb-4">
-						Distribution of SKUs across platforms
+						Distribution of listings across platforms
 					</p>
 					<ResponsiveContainer width="100%" height={220}>
 						<PieChart>
@@ -227,10 +236,7 @@ export default function PortfolioPage() {
 								))}
 							</Pie>
 							<Tooltip
-								formatter={(val) => [
-									`${val} SKUs`,
-									"Count",
-								]}
+								formatter={(val) => [`${val} SKUs`, "Count"]}
 							/>
 						</PieChart>
 					</ResponsiveContainer>
@@ -279,7 +285,7 @@ export default function PortfolioPage() {
 							vertical={false}
 						/>
 						<XAxis
-							dataKey="name"
+							dataKey="chartLabel"
 							tick={{ fontSize: 10, fill: "#94a3b8" }}
 							axisLine={false}
 							tickLine={false}
@@ -308,7 +314,7 @@ export default function PortfolioPage() {
 						<Bar dataKey="profit" radius={[4, 4, 0, 0]}>
 							{barData.map((entry) => (
 								<Cell
-									key={entry.skuId}
+									key={entry.uniqueKey}
 									fill={mpColors[entry.marketplace]}
 									opacity={0.85}
 								/>

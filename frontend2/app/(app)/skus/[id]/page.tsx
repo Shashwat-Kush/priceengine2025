@@ -1,76 +1,36 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { ArrowLeft, Calendar, Package, TrendingUp, Zap } from "lucide-react";
+import clsx from "clsx";
 import {
+	getPricingAnalysis,
 	getSKUById,
 	simulatePriceChange,
-	getProfitCurve,
 } from "@/lib/services";
-import { SKU, SimulatorOutput } from "@/lib/types";
 import {
-	MarketplaceBadge,
-	SensitivityBadge,
-	InventoryBadge,
-	RiskIndicator,
-} from "@/components/Badges";
+	EngineListingView,
+	EngineRecord,
+	PricingAnalysisResponse,
+	SimulatorOutput,
+} from "@/lib/types";
+import { MarketplaceBadge, SensitivityBadge } from "@/components/Badges";
 import {
-	LineChart,
-	Line,
-	XAxis,
-	YAxis,
 	CartesianGrid,
-	Tooltip,
-	Legend,
+	Line,
+	LineChart,
 	ReferenceLine,
 	ResponsiveContainer,
+	Tooltip,
+	XAxis,
+	YAxis,
 } from "recharts";
-import Link from "next/link";
-import {
-	ArrowLeft,
-	Zap,
-	Calendar,
-	ShoppingCart,
-	TrendingUp,
-	Package,
-} from "lucide-react";
-import clsx from "clsx";
 
 function formatINR(n: number) {
 	if (n >= 10_00_000) return `₹${(n / 10_00_000).toFixed(2)}L`;
 	if (n >= 1_000) return `₹${(n / 1_000).toFixed(1)}K`;
-	return `₹${n}`;
-}
-
-function DemandDriverCard({
-	label,
-	value,
-	icon,
-}: {
-	label: string;
-	value: string;
-	icon: React.ReactNode;
-}) {
-	const colorMap: Record<string, string> = {
-		High: "text-red-600 bg-red-50 border-red-200",
-		Medium: "text-orange-600 bg-orange-50 border-orange-200",
-		Low: "text-emerald-600 bg-emerald-50 border-emerald-200",
-	};
-	return (
-		<div
-			className={clsx(
-				"rounded-xl border p-4",
-				colorMap[value] ?? "bg-slate-50 border-slate-200",
-			)}
-		>
-			<div className="flex items-center gap-2 mb-2 text-slate-500">
-				{icon}
-				<span className="text-xs font-medium text-slate-500">
-					{label}
-				</span>
-			</div>
-			<p className="font-bold text-lg">{value}</p>
-		</div>
-	);
+	return `₹${n.toFixed(0)}`;
 }
 
 export default function SKUDetailPage({
@@ -78,56 +38,84 @@ export default function SKUDetailPage({
 }: {
 	params: Promise<{ id: string }>;
 }) {
-	const [sku, setSku] = useState<SKU | null>(null);
-	const [profitCurve, setProfitCurve] = useState<
-		{ price: number; profit: number }[]
-	>([]);
+	const [skuId, setSkuId] = useState("");
+	const [record, setRecord] = useState<EngineRecord | null>(null);
+	const [pricing, setPricing] = useState<PricingAnalysisResponse | null>(
+		null,
+	);
 	const [loading, setLoading] = useState(true);
-	const [skuId, setSkuId] = useState<string>("");
 
-	// Simulator state
+	const [activeListingId, setActiveListingId] = useState("");
 	const [simPrice, setSimPrice] = useState(0);
-	const [simCompPrice, setSimCompPrice] = useState(0);
-	const [simFestival, setSimFestival] = useState(false);
-	const [simOutput, setSimOutput] = useState<SimulatorOutput | null>(null);
+	const [simFestivalBoost, setSimFestivalBoost] = useState(false);
 	const [simLoading, setSimLoading] = useState(false);
+	const [simResult, setSimResult] = useState<SimulatorOutput | null>(null);
 
 	useEffect(() => {
-		params.then(({ id }) => {
+		params.then(async ({ id }) => {
 			setSkuId(id);
-			Promise.all([getSKUById(id), getProfitCurve(id)]).then(
-				([skuData, curveData]) => {
-					if (skuData) {
-						setSku(skuData);
-						setSimPrice(skuData.currentPrice);
-						setSimCompPrice(skuData.competitorPrice);
-					}
-					if (curveData) setProfitCurve(curveData.data);
-					setLoading(false);
-				},
-			);
+			setLoading(true);
+			const [skuData, pricingData] = await Promise.all([
+				getSKUById(id),
+				getPricingAnalysis(id),
+			]);
+
+			setRecord(skuData);
+			setPricing(pricingData);
+
+			const primary = skuData?.listing;
+			const allListings = skuData?.listings ?? [];
+			const firstListing = allListings[0]?.listing || primary;
+
+			if (firstListing) {
+				setActiveListingId(firstListing.id);
+				setSimPrice(firstListing.price);
+			}
+
+			setLoading(false);
 		});
 	}, [params]);
 
-	const handleSimulate = async () => {
-		if (!sku) return;
+	const listingRows: EngineListingView[] = useMemo(() => {
+		if (!record) return [];
+		if (record.listings && record.listings.length > 0)
+			return record.listings;
+		if (record.listing) {
+			return [
+				{
+					listing: record.listing,
+					competitors: record.competitors,
+					computed: record.computed,
+				},
+			];
+		}
+		return [];
+	}, [record]);
+
+	const activeListingRow = useMemo(
+		() =>
+			listingRows.find((row) => row.listing.id === activeListingId) ||
+			listingRows[0],
+		[listingRows, activeListingId],
+	);
+
+	const runSimulation = async () => {
+		if (!skuId || simPrice <= 0) return;
 		setSimLoading(true);
-		const result = await simulatePriceChange(
-			sku,
+		const output = await simulatePriceChange(
+			skuId,
 			simPrice,
-			simCompPrice,
-			simFestival,
+			simFestivalBoost,
 		);
-		setSimOutput(result);
+		setSimResult(output);
 		setSimLoading(false);
 	};
 
 	useEffect(() => {
-		if (sku && simPrice > 0) {
-			handleSimulate();
+		if (skuId && simPrice > 0) {
+			runSimulation();
 		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [sku]);
+	}, [skuId]);
 
 	if (loading) {
 		return (
@@ -137,7 +125,7 @@ export default function SKUDetailPage({
 		);
 	}
 
-	if (!sku) {
+	if (!record) {
 		return (
 			<div className="text-center py-20 text-slate-500">
 				<p className="text-lg font-semibold">SKU not found</p>
@@ -145,22 +133,18 @@ export default function SKUDetailPage({
 					href="/skus"
 					className="text-blue-600 text-sm mt-2 inline-block hover:underline"
 				>
-					← Back to SKUs
+					Back to SKUs
 				</Link>
 			</div>
 		);
 	}
 
-	const optimalPoint = profitCurve.reduce(
-		(best, pt) => (pt.profit > best.profit ? pt : best),
-		profitCurve[0],
-	);
-	const daysUntilStockout =
-		sku.dailyDemand > 0 ? Math.floor(sku.inventory / sku.dailyDemand) : 999;
+	const sku = record.sku;
+	const optimization = pricing?.optimization;
+	const primaryPrice = record.listing?.price ?? 0;
 
 	return (
 		<div className="space-y-5">
-			{/* Breadcrumb + Header */}
 			<div>
 				<Link
 					href="/skus"
@@ -174,196 +158,341 @@ export default function SKUDetailPage({
 							{sku.name}
 						</h2>
 						<div className="flex items-center gap-2 mt-1.5">
-							<MarketplaceBadge value={sku.marketplace} />
-							<InventoryBadge value={sku.inventoryStatus} />
 							<span className="text-xs text-slate-400">
 								{sku.category} · {sku.id}
 							</span>
+							<SensitivityBadge value={sku.demandScale} />
+							<SensitivityBadge value={sku.priceSensitivity} />
+							<SensitivityBadge value={sku.festivalSensitivity} />
 						</div>
 					</div>
-					<div className="flex gap-3 text-right shrink-0">
-						<div className="bg-white rounded-lg border border-slate-200 px-4 py-2">
-							<p className="text-xs text-slate-500">
-								Selling Price
-							</p>
-							<p className="font-bold text-slate-800 text-lg">
-								₹{sku.currentPrice}
-							</p>
+					{optimization && (
+						<div className="grid grid-cols-2 gap-2 text-right shrink-0">
+							<div className="bg-white rounded-lg border border-slate-200 px-4 py-2">
+								<p className="text-xs text-slate-500">
+									Current Price
+								</p>
+								<p className="font-bold text-slate-800 text-lg">
+									₹{optimization.currentPrice}
+								</p>
+							</div>
+							<div className="bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-2">
+								<p className="text-xs text-emerald-600">
+									Optimal Price
+								</p>
+								<p className="font-bold text-emerald-700 text-lg">
+									₹{optimization.optimalPrice}
+								</p>
+							</div>
 						</div>
-						<div className="bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-2">
-							<p className="text-xs text-emerald-600">Margin</p>
-							<p className="font-bold text-emerald-700 text-lg">
-								{sku.margin.toFixed(1)}%
-							</p>
-						</div>
-						<div className="bg-orange-50 border border-orange-200 rounded-lg px-4 py-2">
-							<p className="text-xs text-orange-600">
-								Comp. Price
-							</p>
-							<p className="font-bold text-orange-700 text-lg">
-								₹{sku.competitorPrice}
-							</p>
-						</div>
-					</div>
+					)}
 				</div>
 			</div>
 
-			{/* Section A: Profit Curve */}
 			<div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
 				<h3 className="font-semibold text-slate-800 mb-1">
-					Price vs Profit Curve
+					Optimization Reasoning
 				</h3>
 				<p className="text-xs text-slate-500 mb-4">
-					Find the sweet spot between price and profit — based on
-					demand sensitivity
+					Profit curve is fully computed from demand semantics and
+					competitor context.
 				</p>
-				<ResponsiveContainer width="100%" height={280}>
-					<LineChart
-						data={profitCurve}
-						margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
-					>
-						<CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-						<XAxis
-							dataKey="price"
-							tickFormatter={(v) => `₹${v}`}
-							tick={{ fontSize: 11, fill: "#94a3b8" }}
-							axisLine={false}
-							tickLine={false}
-						/>
-						<YAxis
-							tickFormatter={(v) => `₹${v}`}
-							tick={{ fontSize: 11, fill: "#94a3b8" }}
-							axisLine={false}
-							tickLine={false}
-							width={55}
-						/>
-						<Tooltip
-							formatter={(val) => [
-								`₹${Number(val ?? 0).toFixed(0)}`,
-								"Daily Profit",
-							]}
-							labelFormatter={(l) => `Price: ₹${l}`}
-							contentStyle={{
-								fontSize: 12,
-								borderRadius: 8,
-								border: "1px solid #e2e8f0",
-							}}
-						/>
-						<Line
-							type="monotone"
-							dataKey="profit"
-							stroke="#3b82f6"
-							strokeWidth={2.5}
-							dot={false}
-							name="Profit"
-						/>
-						<ReferenceLine
-							x={sku.currentPrice}
-							stroke="#f59e0b"
-							strokeDasharray="4 4"
-							strokeWidth={2}
-							label={{
-								value: "Current",
-								position: "top",
-								fontSize: 11,
-								fill: "#f59e0b",
-							}}
-						/>
-						<ReferenceLine
-							x={sku.competitorPrice}
-							stroke="#ef4444"
-							strokeDasharray="4 4"
-							strokeWidth={2}
-							label={{
-								value: "Competitor",
-								position: "top",
-								fontSize: 11,
-								fill: "#ef4444",
-							}}
-						/>
-						{optimalPoint && (
-							<ReferenceLine
-								x={optimalPoint.price}
-								stroke="#10b981"
-								strokeDasharray="4 4"
-								strokeWidth={2}
-								label={{
-									value: "Optimal",
-									position: "top",
-									fontSize: 11,
-									fill: "#10b981",
+				{optimization ? (
+					<>
+						<ResponsiveContainer width="100%" height={280}>
+							<LineChart
+								data={optimization.profitCurve}
+								margin={{
+									top: 10,
+									right: 20,
+									left: 0,
+									bottom: 0,
 								}}
-							/>
-						)}
-					</LineChart>
-				</ResponsiveContainer>
-				{optimalPoint && (
-					<div className="flex items-center gap-2 mt-3 p-3 bg-emerald-50 rounded-lg border border-emerald-200">
-						<Zap size={14} className="text-emerald-600" />
-						<p className="text-xs text-emerald-700">
-							<strong>
-								Optimal price: ₹{optimalPoint.price}
-							</strong>{" "}
-							— maximizes daily profit at ₹
-							{optimalPoint.profit.toFixed(0)}. Your current price
-							of ₹{sku.currentPrice} earns{" "}
-							{(
-								((optimalPoint.profit -
-									(profitCurve.find(
-										(p) => p.price >= sku.currentPrice,
-									)?.profit ?? 0)) /
-									optimalPoint.profit) *
-								100
-							).toFixed(1)}
-							% less.
-						</p>
-					</div>
+							>
+								<CartesianGrid
+									strokeDasharray="3 3"
+									stroke="#f1f5f9"
+								/>
+								<XAxis
+									dataKey="price"
+									tickFormatter={(v) => `₹${v}`}
+									tick={{ fontSize: 11, fill: "#94a3b8" }}
+									axisLine={false}
+									tickLine={false}
+								/>
+								<YAxis
+									tickFormatter={(v) => `₹${v}`}
+									tick={{ fontSize: 11, fill: "#94a3b8" }}
+									axisLine={false}
+									tickLine={false}
+									width={55}
+								/>
+								<Tooltip
+									formatter={(val) => [
+										`₹${Number(val ?? 0).toFixed(0)}`,
+										"Profit / day",
+									]}
+									labelFormatter={(l) => `Price: ₹${l}`}
+									contentStyle={{
+										fontSize: 12,
+										borderRadius: 8,
+										border: "1px solid #e2e8f0",
+									}}
+								/>
+								<Line
+									type="monotone"
+									dataKey="profit"
+									stroke="#3b82f6"
+									strokeWidth={2.5}
+									dot={false}
+								/>
+								<ReferenceLine
+									x={optimization.currentPrice}
+									stroke="#f59e0b"
+									strokeDasharray="4 4"
+								/>
+								<ReferenceLine
+									x={optimization.optimalPrice}
+									stroke="#10b981"
+									strokeDasharray="4 4"
+								/>
+							</LineChart>
+						</ResponsiveContainer>
+						<div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+							<div className="bg-slate-50 rounded-lg border border-slate-100 p-3">
+								<p className="text-xs text-slate-500">
+									Estimated Demand
+								</p>
+								<p className="font-semibold text-slate-800">
+									{optimization.estimatedDemand.toFixed(2)}
+									/day
+								</p>
+							</div>
+							<div className="bg-slate-50 rounded-lg border border-slate-100 p-3">
+								<p className="text-xs text-slate-500">
+									Comp. Min / Avg
+								</p>
+								<p className="font-semibold text-slate-800">
+									₹{optimization.minCompPrice} / ₹
+									{optimization.avgCompPrice}
+								</p>
+							</div>
+							<div className="bg-slate-50 rounded-lg border border-slate-100 p-3">
+								<p className="text-xs text-slate-500">
+									Recommended Band
+								</p>
+								<p className="font-semibold text-slate-800">
+									₹{optimization.recommendedMin} - ₹
+									{optimization.recommendedMax}
+								</p>
+							</div>
+							<div className="bg-emerald-50 rounded-lg border border-emerald-100 p-3">
+								<p className="text-xs text-emerald-700">
+									Profit Delta / day
+								</p>
+								<p className="font-semibold text-emerald-700">
+									{formatINR(
+										optimization.estimatedProfitChange,
+									)}
+								</p>
+							</div>
+						</div>
+					</>
+				) : (
+					<p className="text-sm text-slate-500">
+						Pricing analysis is unavailable for this SKU.
+					</p>
 				)}
 			</div>
 
-			{/* Section B + Section C side by side */}
-			<div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-				{/* Section B: Demand Drivers */}
-				<div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
-					<h3 className="font-semibold text-slate-800 mb-1">
-						Demand Drivers
+			<div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
+				<div className="flex items-center justify-between gap-2 mb-3">
+					<h3 className="font-semibold text-slate-800">
+						Listings, Competitors, and Computed Metrics
 					</h3>
-					<p className="text-xs text-slate-500 mb-4">
-						Key factors influencing this SKU&apos;s performance
-					</p>
-					<div className="grid grid-cols-2 gap-3">
-						<DemandDriverCard
-							label="Price Sensitivity"
-							value={sku.priceSensitivity}
-							icon={<TrendingUp size={13} />}
-						/>
-						<DemandDriverCard
-							label="Competitor Sensitivity"
-							value={sku.competitorRisk}
-							icon={<ShoppingCart size={13} />}
-						/>
-						<DemandDriverCard
-							label="Festival Boost Potential"
-							value={sku.festivalBoostPotential}
-							icon={<Calendar size={13} />}
-						/>
-						<DemandDriverCard
-							label="Marketplace Strength"
-							value={sku.marketplaceStrength}
-							icon={<Zap size={13} />}
-						/>
-					</div>
+					<select
+						value={activeListingRow?.listing.id || ""}
+						onChange={(e) => {
+							setActiveListingId(e.target.value);
+							const row = listingRows.find(
+								(it) => it.listing.id === e.target.value,
+							);
+							if (row) setSimPrice(row.listing.price);
+						}}
+						className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"
+					>
+						{listingRows.map((row) => (
+							<option key={row.listing.id} value={row.listing.id}>
+								{row.listing.marketplace} ({row.listing.id})
+							</option>
+						))}
+					</select>
 				</div>
 
-				{/* Section C: Scenario Simulator */}
-				<div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
-					<h3 className="font-semibold text-slate-800 mb-1">
-						Scenario Simulator
-					</h3>
-					<p className="text-xs text-slate-500 mb-4">
-						Change inputs to see projected 30-day outcomes
+				{listingRows.length === 0 ? (
+					<p className="text-sm text-slate-500">
+						No listings available. Create one from
+						inventory/listings page.
 					</p>
-					<div className="space-y-3">
+				) : (
+					<>
+						<div className="overflow-x-auto">
+							<table className="w-full text-sm">
+								<thead>
+									<tr className="border-b border-slate-100 bg-slate-50">
+										<th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">
+											Marketplace
+										</th>
+										<th className="text-right px-3 py-3 text-xs font-semibold text-slate-500 uppercase">
+											Price
+										</th>
+										<th className="text-right px-3 py-3 text-xs font-semibold text-slate-500 uppercase">
+											Cost
+										</th>
+										<th className="text-right px-3 py-3 text-xs font-semibold text-slate-500 uppercase">
+											Inventory
+										</th>
+										<th className="text-right px-3 py-3 text-xs font-semibold text-slate-500 uppercase">
+											Demand
+										</th>
+										<th className="text-right px-3 py-3 text-xs font-semibold text-slate-500 uppercase">
+											Profit/day
+										</th>
+										<th className="text-right px-3 py-3 text-xs font-semibold text-slate-500 uppercase">
+											Reorder Qty
+										</th>
+									</tr>
+								</thead>
+								<tbody>
+									{listingRows.map((row) => (
+										<tr
+											key={row.listing.id}
+											className="border-b border-slate-100 last:border-0"
+										>
+											<td className="px-4 py-3.5">
+												<MarketplaceBadge
+													value={
+														row.listing.marketplace
+													}
+												/>
+											</td>
+											<td className="px-3 py-3.5 text-right font-mono">
+												₹{row.listing.price}
+											</td>
+											<td className="px-3 py-3.5 text-right font-mono text-slate-600">
+												₹{row.listing.cost}
+											</td>
+											<td className="px-3 py-3.5 text-right font-mono">
+												{row.listing.inventory}
+											</td>
+											<td className="px-3 py-3.5 text-right font-mono text-blue-700">
+												{row.computed.demand.toFixed(2)}
+											</td>
+											<td className="px-3 py-3.5 text-right font-mono text-emerald-700">
+												{formatINR(row.computed.profit)}
+											</td>
+											<td className="px-3 py-3.5 text-right font-mono">
+												{row.computed.reorderQty}
+											</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
+						</div>
+
+						<div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+							<div className="border border-slate-100 rounded-xl p-4">
+								<h4 className="font-medium text-slate-800 mb-2">
+									Active Listing Computed Block
+								</h4>
+								<div className="text-sm text-slate-600 space-y-1">
+									<p>
+										Revenue/day:{" "}
+										<strong>
+											{formatINR(
+												activeListingRow?.computed
+													.revenue ?? 0,
+											)}
+										</strong>
+									</p>
+									<p>
+										Profit/day:{" "}
+										<strong>
+											{formatINR(
+												activeListingRow?.computed
+													.profit ?? 0,
+											)}
+										</strong>
+									</p>
+									<p>
+										Avg competitor price:{" "}
+										<strong>
+											₹
+											{activeListingRow?.computed
+												.avgCompPrice ?? 0}
+										</strong>
+									</p>
+									<p>
+										Min competitor price:{" "}
+										<strong>
+											₹
+											{activeListingRow?.computed
+												.minCompPrice ?? 0}
+										</strong>
+									</p>
+									<p>
+										Days to stockout:{" "}
+										<strong>
+											{activeListingRow?.computed
+												.daysToStockout ?? 999}
+										</strong>
+									</p>
+								</div>
+							</div>
+							<div className="border border-slate-100 rounded-xl p-4">
+								<h4 className="font-medium text-slate-800 mb-2">
+									Competitors (Active Listing)
+								</h4>
+								{!activeListingRow ||
+								activeListingRow.competitors.length === 0 ? (
+									<p className="text-sm text-slate-500">
+										No competitors recorded.
+									</p>
+								) : (
+									<div className="space-y-2">
+										{activeListingRow.competitors.map(
+											(comp) => (
+												<div
+													key={comp.id}
+													className="flex items-center justify-between text-sm border-b border-slate-100 pb-1 last:border-0"
+												>
+													<span className="text-slate-700">
+														{comp.name}
+													</span>
+													<span className="font-mono text-slate-600">
+														₹{comp.price}
+													</span>
+												</div>
+											),
+										)}
+									</div>
+								)}
+							</div>
+						</div>
+					</>
+				)}
+			</div>
+
+			<div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
+				<h3 className="font-semibold text-slate-800 mb-1">
+					Scenario Simulator
+				</h3>
+				<p className="text-xs text-slate-500 mb-4">
+					Simulate price and festival effect. Competitor influence
+					remains system-derived.
+				</p>
+				<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+					<div className="lg:col-span-2 space-y-3">
 						<div>
 							<div className="flex justify-between text-xs mb-1.5">
 								<label className="text-slate-600 font-medium">
@@ -375,39 +504,19 @@ export default function SKUDetailPage({
 							</div>
 							<input
 								type="range"
-								min={Math.round(sku.cost * 1.05)}
-								max={Math.round(sku.currentPrice * 1.5)}
+								min={Math.round(
+									(activeListingRow?.listing.cost ??
+										primaryPrice) * 1.01,
+								)}
+								max={Math.round(
+									(activeListingRow?.listing.price ??
+										primaryPrice) * 1.5,
+								)}
 								value={simPrice}
 								onChange={(e) =>
 									setSimPrice(Number(e.target.value))
 								}
 								className="w-full h-2 rounded-lg appearance-none bg-slate-200 accent-blue-500"
-							/>
-							<div className="flex justify-between text-xs text-slate-400 mt-0.5">
-								<span>₹{Math.round(sku.cost * 1.05)}</span>
-								<span>
-									₹{Math.round(sku.currentPrice * 1.5)}
-								</span>
-							</div>
-						</div>
-						<div>
-							<div className="flex justify-between text-xs mb-1.5">
-								<label className="text-slate-600 font-medium">
-									Competitor Price
-								</label>
-								<span className="font-bold text-orange-600">
-									₹{simCompPrice}
-								</span>
-							</div>
-							<input
-								type="range"
-								min={Math.round(sku.cost * 1.0)}
-								max={Math.round(sku.currentPrice * 1.6)}
-								value={simCompPrice}
-								onChange={(e) =>
-									setSimCompPrice(Number(e.target.value))
-								}
-								className="w-full h-2 rounded-lg appearance-none bg-slate-200 accent-orange-400"
 							/>
 						</div>
 						<div className="flex items-center justify-between py-2 border-t border-slate-100">
@@ -415,10 +524,10 @@ export default function SKUDetailPage({
 								Festival Demand Boost
 							</label>
 							<button
-								onClick={() => setSimFestival((v) => !v)}
+								onClick={() => setSimFestivalBoost((v) => !v)}
 								className={clsx(
 									"relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
-									simFestival
+									simFestivalBoost
 										? "bg-blue-600"
 										: "bg-slate-200",
 								)}
@@ -426,7 +535,7 @@ export default function SKUDetailPage({
 								<span
 									className={clsx(
 										"inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
-										simFestival
+										simFestivalBoost
 											? "translate-x-6"
 											: "translate-x-1",
 									)}
@@ -434,178 +543,101 @@ export default function SKUDetailPage({
 							</button>
 						</div>
 						<button
-							onClick={handleSimulate}
+							onClick={runSimulation}
 							disabled={simLoading}
-							className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-2 rounded-lg text-sm transition-colors"
+							className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-2 px-3 rounded-lg text-sm"
 						>
-							{simLoading ? "Calculating…" : "Run Simulation"}
+							{simLoading ? "Calculating..." : "Run Simulation"}
 						</button>
+					</div>
 
-						{simOutput && (
-							<div className="mt-2 grid grid-cols-2 gap-2">
-								<div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2.5">
-									<p className="text-xs text-blue-600">
-										Expected Units (30d)
-									</p>
-									<p className="font-bold text-blue-800">
-										{simOutput.expectedUnits}
-									</p>
-								</div>
-								<div className="bg-slate-50 border border-slate-100 rounded-lg px-3 py-2.5">
-									<p className="text-xs text-slate-500">
-										Revenue (30d)
-									</p>
-									<p className="font-bold text-slate-700">
-										{formatINR(simOutput.revenue)}
-									</p>
-								</div>
-								<div className="bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2.5">
-									<p className="text-xs text-emerald-600">
-										Profit (30d)
-									</p>
-									<p className="font-bold text-emerald-700">
-										{formatINR(simOutput.profit)}
-									</p>
-								</div>
-								<div
-									className={clsx(
-										"border rounded-lg px-3 py-2.5",
-										daysUntilStockout <= 7
-											? "bg-red-50 border-red-100"
-											: "bg-slate-50 border-slate-100",
-									)}
-								>
-									<p
-										className={clsx(
-											"text-xs",
-											daysUntilStockout <= 7
-												? "text-red-500"
-												: "text-slate-500",
-										)}
-									>
-										Stockout Date
-									</p>
-									<p
-										className={clsx(
-											"font-bold text-sm",
-											daysUntilStockout <= 7
-												? "text-red-700"
-												: "text-slate-700",
-										)}
-									>
-										{simOutput.stockoutDate}
-									</p>
-								</div>
-							</div>
-						)}
+					<div className="space-y-2">
+						<div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2.5">
+							<p className="text-xs text-blue-600">
+								Expected Units (30d)
+							</p>
+							<p className="font-bold text-blue-800">
+								{simResult?.expectedUnits ?? 0}
+							</p>
+						</div>
+						<div className="bg-slate-50 border border-slate-100 rounded-lg px-3 py-2.5">
+							<p className="text-xs text-slate-500">
+								Demand (daily)
+							</p>
+							<p className="font-bold text-slate-700">
+								{simResult?.demand?.toFixed(2) ?? "0.00"}
+							</p>
+						</div>
+						<div className="bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2.5">
+							<p className="text-xs text-emerald-600">
+								Profit (30d)
+							</p>
+							<p className="font-bold text-emerald-700">
+								{formatINR(simResult?.profit ?? 0)}
+							</p>
+						</div>
+						<div className="bg-slate-50 border border-slate-100 rounded-lg px-3 py-2.5">
+							<p className="text-xs text-slate-500">
+								Projected Stockout
+							</p>
+							<p className="font-bold text-slate-700">
+								{simResult?.stockoutDate ?? "-"}
+							</p>
+						</div>
 					</div>
 				</div>
 			</div>
 
-			{/* Section D: Inventory Planning */}
 			<div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
-				<h3 className="font-semibold text-slate-800 mb-1">
-					Inventory Planning
+				<h3 className="font-semibold text-slate-800 mb-2">
+					Inventory Planning Snapshot
 				</h3>
-				<p className="text-xs text-slate-500 mb-4">
-					Stock levels, demand, and reorder recommendations
-				</p>
 				<div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
 					<div className="border border-slate-200 rounded-xl p-4">
 						<div className="flex items-center gap-2 mb-2">
 							<Package size={14} className="text-slate-400" />
 							<span className="text-xs text-slate-500">
-								Current Stock
+								Stock
 							</span>
 						</div>
 						<p className="text-2xl font-bold text-slate-800">
-							{sku.inventory}
+							{activeListingRow?.listing.inventory ?? 0}
 						</p>
-						<p className="text-xs text-slate-400 mt-0.5">units</p>
 					</div>
 					<div className="border border-slate-200 rounded-xl p-4">
 						<div className="flex items-center gap-2 mb-2">
 							<TrendingUp size={14} className="text-slate-400" />
 							<span className="text-xs text-slate-500">
-								Daily Demand
+								Demand/day
 							</span>
 						</div>
 						<p className="text-2xl font-bold text-slate-800">
-							{sku.dailyDemand}
-						</p>
-						<p className="text-xs text-slate-400 mt-0.5">
-							units / day
+							{activeListingRow?.computed.demand?.toFixed(2) ??
+								"0.00"}
 						</p>
 					</div>
-					<div
-						className={clsx(
-							"border rounded-xl p-4",
-							daysUntilStockout <= 7
-								? "border-red-200 bg-red-50"
-								: daysUntilStockout <= 14
-									? "border-orange-200 bg-orange-50"
-									: "border-slate-200",
-						)}
-					>
+					<div className="border border-slate-200 rounded-xl p-4">
 						<div className="flex items-center gap-2 mb-2">
-							<Calendar
-								size={14}
-								className={
-									daysUntilStockout <= 7
-										? "text-red-400"
-										: "text-slate-400"
-								}
-							/>
+							<Calendar size={14} className="text-slate-400" />
 							<span className="text-xs text-slate-500">
-								Days Until Stockout
+								Days to Stockout
 							</span>
 						</div>
-						<p
-							className={clsx(
-								"text-2xl font-bold",
-								daysUntilStockout <= 7
-									? "text-red-700"
-									: daysUntilStockout <= 14
-										? "text-orange-700"
-										: "text-slate-800",
-							)}
-						>
-							{daysUntilStockout >= 999 ? "∞" : daysUntilStockout}
-						</p>
-						<p className="text-xs text-slate-400 mt-0.5">
-							days remaining
+						<p className="text-2xl font-bold text-slate-800">
+							{activeListingRow?.computed.daysToStockout ?? 999}
 						</p>
 					</div>
 					<div className="border border-blue-200 bg-blue-50 rounded-xl p-4">
 						<div className="flex items-center gap-2 mb-2">
 							<Zap size={14} className="text-blue-500" />
 							<span className="text-xs text-slate-500">
-								Reorder Suggestion
+								Reorder Qty
 							</span>
 						</div>
 						<p className="text-2xl font-bold text-blue-700">
-							{Math.max(
-								0,
-								Math.ceil(
-									sku.dailyDemand * sku.leadTimeDays * 2.4 -
-										sku.inventory,
-								),
-							)}
-						</p>
-						<p className="text-xs text-slate-400 mt-0.5">
-							units recommended
+							{activeListingRow?.computed.reorderQty ?? 0}
 						</p>
 					</div>
-				</div>
-				<div className="mt-3 bg-slate-50 rounded-lg px-4 py-3 text-xs text-slate-600">
-					Lead time: <strong>{sku.leadTimeDays} days</strong> ·
-					Storage cost:{" "}
-					<strong>₹{sku.storageCostPerUnit}/unit/month</strong> ·
-					Reorder point:{" "}
-					<strong>
-						{Math.round(sku.dailyDemand * sku.leadTimeDays * 1.2)}{" "}
-						units
-					</strong>
 				</div>
 			</div>
 		</div>

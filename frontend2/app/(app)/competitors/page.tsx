@@ -14,22 +14,28 @@ import {
 	CompetitorCreateInput,
 	CompetitorHistory,
 	CompetitorRecord,
+	EngineRecord,
 	Listing,
-	SKU,
 } from "@/lib/types";
 import { MarketplaceBadge, RiskIndicator } from "@/components/Badges";
 import {
-	LineChart,
+	CartesianGrid,
+	Legend,
 	Line,
+	LineChart,
+	ResponsiveContainer,
+	Tooltip,
 	XAxis,
 	YAxis,
-	CartesianGrid,
-	Tooltip,
-	Legend,
-	ResponsiveContainer,
 } from "recharts";
 import clsx from "clsx";
 import Link from "next/link";
+
+type CompetitorView = EngineRecord & {
+	history: CompetitorHistory[];
+	undercutFrequency: number;
+	risk: "High" | "Medium" | "Low";
+};
 
 const defaultCompetitorForm: CompetitorCreateInput = {
 	listingId: "",
@@ -40,14 +46,9 @@ const defaultCompetitorForm: CompetitorCreateInput = {
 };
 
 export default function CompetitorsPage() {
-	const [skuOptions, setSkuOptions] = useState<SKU[]>([]);
+	const [skuOptions, setSkuOptions] = useState<EngineRecord[]>([]);
 	const [selectedSkuId, setSelectedSkuId] = useState("");
-	const [data, setData] = useState<{
-		sku: SKU;
-		history: CompetitorHistory[];
-		undercutFrequency: number;
-		risk: string;
-	} | null>(null);
+	const [data, setData] = useState<CompetitorView | null>(null);
 	const [competitors, setCompetitors] = useState<CompetitorRecord[]>([]);
 	const [listings, setListings] = useState<Listing[]>([]);
 	const [form, setForm] = useState<CompetitorCreateInput>(
@@ -70,9 +71,9 @@ export default function CompetitorsPage() {
 
 	const loadSkuOptions = async () => {
 		setLoading(true);
-		const skus = await getSKUs();
-		setSkuOptions(skus);
-		setSelectedSkuId((prev) => prev || skus[0]?.id || "");
+		const records = await getSKUs();
+		setSkuOptions(records);
+		setSelectedSkuId((prev) => prev || records[0]?.sku.id || "");
 		setLoading(false);
 	};
 
@@ -90,7 +91,8 @@ export default function CompetitorsPage() {
 			getCompetitorItemsBySku(skuId),
 			getListingsBySku(skuId),
 		]);
-		setData(analysis);
+
+		setData(analysis as CompetitorView | null);
 		setCompetitors(competitorRows);
 		setListings(listingRows);
 		setForm((prev) => ({
@@ -102,12 +104,10 @@ export default function CompetitorsPage() {
 
 	useEffect(() => {
 		loadSkuOptions();
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	useEffect(() => {
 		loadCompetitorContext(selectedSkuId);
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [selectedSkuId]);
 
 	const resetForm = () => {
@@ -127,10 +127,7 @@ export default function CompetitorsPage() {
 		setSubmitting(true);
 		try {
 			if (!editingCompetitorId) {
-				await createCompetitor({
-					...form,
-					name: form.name.trim(),
-				});
+				await createCompetitor({ ...form, name: form.name.trim() });
 				showToast("success", "Competitor created.");
 			} else {
 				await updateCompetitor(editingCompetitorId, {
@@ -171,9 +168,7 @@ export default function CompetitorsPage() {
 			await deleteCompetitor(competitorId);
 			showToast("success", "Competitor deleted.");
 			await loadCompetitorContext(selectedSkuId);
-			if (editingCompetitorId === competitorId) {
-				resetForm();
-			}
+			if (editingCompetitorId === competitorId) resetForm();
 		} catch (error) {
 			showToast(
 				"error",
@@ -181,6 +176,11 @@ export default function CompetitorsPage() {
 			);
 		}
 	};
+
+	const ourPrice = data?.listing?.price ?? 0;
+	const cost = data?.listing?.cost ?? 0;
+	const minCompPrice = data?.computed.minCompPrice ?? 0;
+	const demand = data?.computed.demand ?? 0;
 
 	return (
 		<div className="space-y-5">
@@ -199,7 +199,6 @@ export default function CompetitorsPage() {
 				</div>
 			)}
 
-			{/* SKU Selector */}
 			<div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4 flex items-center gap-4">
 				<label className="text-sm font-medium text-slate-600 whitespace-nowrap">
 					Select SKU:
@@ -209,9 +208,10 @@ export default function CompetitorsPage() {
 					onChange={(e) => setSelectedSkuId(e.target.value)}
 					className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
 				>
-					{skuOptions.map((sku) => (
-						<option key={sku.id} value={sku.id}>
-							{sku.name} ({sku.marketplace})
+					{skuOptions.map((record) => (
+						<option key={record.sku.id} value={record.sku.id}>
+							{record.sku.name} (
+							{record.listing?.marketplace || "No listing"})
 						</option>
 					))}
 				</select>
@@ -231,20 +231,19 @@ export default function CompetitorsPage() {
 				</div>
 			) : data ? (
 				<>
-					{/* Metrics Row */}
 					<div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
 						<div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4">
 							<p className="text-xs text-slate-500 mb-1">
 								Our Current Price
 							</p>
 							<p className="text-2xl font-bold text-slate-800">
-								₹{data.sku.currentPrice}
+								₹{ourPrice}
 							</p>
 						</div>
 						<div
 							className={clsx(
 								"rounded-xl border shadow-sm p-4",
-								data.sku.competitorPrice < data.sku.currentPrice
+								minCompPrice < ourPrice
 									? "bg-red-50 border-red-200"
 									: "bg-emerald-50 border-emerald-200",
 							)}
@@ -252,40 +251,33 @@ export default function CompetitorsPage() {
 							<p
 								className={clsx(
 									"text-xs mb-1",
-									data.sku.competitorPrice <
-										data.sku.currentPrice
+									minCompPrice < ourPrice
 										? "text-red-500"
 										: "text-emerald-600",
 								)}
 							>
-								Competitor Price
+								Min Competitor Price
 							</p>
 							<p
 								className={clsx(
 									"text-2xl font-bold",
-									data.sku.competitorPrice <
-										data.sku.currentPrice
+									minCompPrice < ourPrice
 										? "text-red-700"
 										: "text-emerald-700",
 								)}
 							>
-								₹{data.sku.competitorPrice}
+								₹{minCompPrice}
 							</p>
 							<p className="text-xs mt-0.5">
-								{data.sku.competitorPrice <
-								data.sku.currentPrice ? (
+								{minCompPrice < ourPrice ? (
 									<span className="text-red-500 font-medium">
-										₹
-										{data.sku.currentPrice -
-											data.sku.competitorPrice}{" "}
+										₹{(ourPrice - minCompPrice).toFixed(2)}{" "}
 										cheaper than you
 									</span>
 								) : (
 									<span className="text-emerald-600 font-medium">
-										₹
-										{data.sku.competitorPrice -
-											data.sku.currentPrice}{" "}
-										more expensive
+										₹{(minCompPrice - ourPrice).toFixed(2)}{" "}
+										higher than your price
 									</span>
 								)}
 							</p>
@@ -305,23 +297,22 @@ export default function CompetitorsPage() {
 							<p className="text-xs text-slate-500 mb-2">
 								Competitor Risk
 							</p>
-							<RiskIndicator
-								value={data.risk as "High" | "Medium" | "Low"}
-							/>
+							<RiskIndicator value={data.risk} />
 						</div>
 					</div>
 
-					{/* Price History Chart */}
 					<div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
 						<div className="flex items-center justify-between mb-1">
 							<h3 className="font-semibold text-slate-800">
 								30-Day Price History
 							</h3>
-							<MarketplaceBadge value={data.sku.marketplace} />
+							<MarketplaceBadge
+								value={data.listing?.marketplace || "Amazon"}
+							/>
 						</div>
 						<p className="text-xs text-slate-500 mb-4">
-							Track price movements vs. your top competitor over
-							the past 30 days
+							Track your listing price vs. top competitor over the
+							past 30 days.
 						</p>
 						<ResponsiveContainer width="100%" height={300}>
 							<LineChart
@@ -393,7 +384,6 @@ export default function CompetitorsPage() {
 						</ResponsiveContainer>
 					</div>
 
-					{/* Risk Breakdown */}
 					<div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
 						<h3 className="font-semibold text-slate-800 mb-4">
 							Risk Assessment
@@ -403,10 +393,9 @@ export default function CompetitorsPage() {
 								{
 									label: "Buy Box Loss Risk",
 									value:
-										data.sku.competitorRisk === "High"
+										data.risk === "High"
 											? 78
-											: data.sku.competitorRisk ===
-												  "Medium"
+											: data.risk === "Medium"
 												? 42
 												: 15,
 									color: "bg-red-500",
@@ -451,11 +440,11 @@ export default function CompetitorsPage() {
 						</div>
 						<div className="mt-4 p-3 bg-blue-50 rounded-lg text-xs text-blue-700 border border-blue-100">
 							<strong>Recommendation:</strong>{" "}
-							{data.sku.competitorRisk === "High"
-								? `Match competitor at ₹${data.sku.competitorPrice} to recover Buy Box. Estimated profit gain: ₹${((data.sku.currentPrice - data.sku.cost) * data.sku.dailyDemand * 0.3 * 30).toFixed(0)}/month.`
-								: data.sku.competitorRisk === "Medium"
-									? "Hold current price. Monitor competitor activity for the next 5 days before adjusting."
-									: "Your pricing is competitive. No action required."}
+							{data.risk === "High"
+								? `Consider closing the gap to ₹${minCompPrice.toFixed(2)}. Estimated monthly upside from reducing undercut pressure: ₹${((ourPrice - cost) * demand * 30 * 0.2).toFixed(0)}.`
+								: data.risk === "Medium"
+									? "Monitor competitor movements for 5 days and react only if undercut frequency rises above 50%."
+									: "Pricing position is stable. Keep current strategy and monitor weekly."}
 						</div>
 					</div>
 

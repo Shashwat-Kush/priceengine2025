@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
+from pymongo.errors import DuplicateKeyError
 
 from app.dependencies.auth import get_current_user
 from app.db.mongo import get_database
@@ -67,11 +68,34 @@ async def create_listing(
     if not await db.skus.find_one({"_id": payload.sku_id, "org_id": org_id}, {"_id": 1}):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="SKU not found")
 
+    if payload.price <= payload.cost:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="price must be greater than cost")
+
     listing_doc = listing_doc_from_create(payload, org_id=org_id)
     if await db.listings.find_one({"_id": listing_doc["_id"]}, {"_id": 1}):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Listing ID already exists")
 
-    await db.listings.insert_one(listing_doc)
+    duplicate = await db.listings.find_one(
+        {
+            "org_id": org_id,
+            "sku_id": listing_doc["sku_id"],
+            "marketplace": listing_doc["marketplace"],
+        },
+        {"_id": 1},
+    )
+    if duplicate:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Listing already exists for this SKU and marketplace",
+        )
+
+    try:
+        await db.listings.insert_one(listing_doc)
+    except DuplicateKeyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Listing already exists for this SKU and marketplace",
+        ) from exc
     return listing_to_frontend(listing_doc)
 
 
@@ -88,12 +112,45 @@ async def update_listing(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Listing not found")
 
     updates = listing_doc_updates(payload)
+
+    if "price" in updates:
+        target_cost = float(updates.get("cost", listing.get("cost", 0.0)))
+        if float(updates["price"]) <= target_cost:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="price must be greater than cost")
+    elif "cost" in updates:
+        target_price = float(listing.get("price", listing.get("current_price", 0.0)))
+        if target_price <= float(updates["cost"]):
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="price must be greater than cost")
+
     if "sku_id" in updates:
         if not await db.skus.find_one({"_id": updates["sku_id"], "org_id": org_id}, {"_id": 1}):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Target SKU does not belong to organization")
 
+    next_sku = str(updates.get("sku_id", listing.get("sku_id")))
+    next_marketplace = str(updates.get("marketplace", listing.get("marketplace")))
+    duplicate = await db.listings.find_one(
+        {
+            "_id": {"$ne": listing_id},
+            "org_id": org_id,
+            "sku_id": next_sku,
+            "marketplace": next_marketplace,
+        },
+        {"_id": 1},
+    )
+    if duplicate:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Listing already exists for this SKU and marketplace",
+        )
+
     if updates:
-        await db.listings.update_one({"_id": listing_id, "org_id": org_id}, {"$set": updates})
+        try:
+            await db.listings.update_one({"_id": listing_id, "org_id": org_id}, {"$set": updates})
+        except DuplicateKeyError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Listing already exists for this SKU and marketplace",
+            ) from exc
 
     updated = await db.listings.find_one({"_id": listing_id, "org_id": org_id})
     if not updated:

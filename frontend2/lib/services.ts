@@ -5,6 +5,7 @@ import {
 	CompetitorRecord,
 	CompetitorUpdateInput,
 	DashboardKPIs,
+	EngineRecord,
 	FestivalCatalogItem,
 	FestivalCreateInput,
 	FestivalEvent,
@@ -13,8 +14,8 @@ import {
 	ListingCreateInput,
 	ListingUpdateInput,
 	PortfolioDataPoint,
+	PricingAnalysisResponse,
 	RecommendedAction,
-	SKU,
 	SKUCreateInput,
 	SKUUpdateInput,
 	SimulatorOutput,
@@ -115,7 +116,7 @@ export async function logoutUser() {
 			});
 		}
 	} catch {
-		// Token may already be expired/invalid; local cleanup still applies.
+		// Ignore token expiration/invalidation errors and clear client state.
 	} finally {
 		clearAuthSession();
 	}
@@ -170,7 +171,7 @@ export async function getDashboardData() {
 
 export async function getSKUs() {
 	try {
-		return await apiRequest<SKU[]>("/skus");
+		return await apiRequest<EngineRecord[]>("/skus");
 	} catch {
 		return [];
 	}
@@ -178,51 +179,35 @@ export async function getSKUs() {
 
 export async function getSKUById(id: string) {
 	try {
-		return await apiRequest<SKU>(`/skus/${id}`);
+		return await apiRequest<EngineRecord>(`/skus/${id}`);
 	} catch {
 		return null;
 	}
 }
 
 export async function createSKU(input: SKUCreateInput) {
-	return await apiRequest<SKU>("/skus", {
+	return await apiRequest<EngineRecord>("/skus", {
 		method: "POST",
 		body: JSON.stringify({
 			id: input.id,
 			name: input.name,
 			category: input.category,
-			base_demand: input.baseDemand,
+			demand_scale: input.demandScale,
 			price_sensitivity: input.priceSensitivity,
-			festival_boost_potential: input.festivalBoostPotential,
-			marketplace: input.marketplace,
-			current_price: input.currentPrice,
-			cost: input.cost,
-			competitor_price: input.competitorPrice,
-			inventory: input.inventory,
-			daily_demand: input.dailyDemand,
-			lead_time_days: input.leadTimeDays,
-			storage_cost_per_unit: input.storageCostPerUnit,
+			festival_sensitivity: input.festivalSensitivity,
 		}),
 	});
 }
 
 export async function updateSKU(skuId: string, input: SKUUpdateInput) {
-	return await apiRequest<SKU>(`/skus/${skuId}`, {
+	return await apiRequest<EngineRecord>(`/skus/${skuId}`, {
 		method: "PUT",
 		body: JSON.stringify({
 			name: input.name,
 			category: input.category,
-			base_demand: input.baseDemand,
+			demand_scale: input.demandScale,
 			price_sensitivity: input.priceSensitivity,
-			festival_boost_potential: input.festivalBoostPotential,
-			marketplace: input.marketplace,
-			current_price: input.currentPrice,
-			cost: input.cost,
-			competitor_price: input.competitorPrice,
-			inventory: input.inventory,
-			daily_demand: input.dailyDemand,
-			lead_time_days: input.leadTimeDays,
-			storage_cost_per_unit: input.storageCostPerUnit,
+			festival_sensitivity: input.festivalSensitivity,
 		}),
 	});
 }
@@ -253,10 +238,9 @@ export async function createListing(input: ListingCreateInput) {
 			id: input.id,
 			sku_id: input.skuId,
 			marketplace: input.marketplace,
-			current_price: input.currentPrice,
+			price: input.price,
 			cost: input.cost,
 			inventory: input.inventory,
-			daily_demand: input.dailyDemand,
 			lead_time_days: input.leadTimeDays,
 			storage_cost_per_unit: input.storageCostPerUnit,
 		}),
@@ -272,10 +256,9 @@ export async function updateListing(
 		body: JSON.stringify({
 			sku_id: input.skuId,
 			marketplace: input.marketplace,
-			current_price: input.currentPrice,
+			price: input.price,
 			cost: input.cost,
 			inventory: input.inventory,
-			daily_demand: input.dailyDemand,
 			lead_time_days: input.leadTimeDays,
 			storage_cost_per_unit: input.storageCostPerUnit,
 		}),
@@ -389,16 +372,14 @@ export async function deleteFestival(festivalId: string) {
 }
 
 export async function simulatePriceChange(
-	sku: SKU,
+	skuId: string,
 	price: number,
-	competitorPrice: number,
 	festivalBoost: boolean,
 ): Promise<SimulatorOutput> {
-	return await apiRequest<SimulatorOutput>(`/pricing/simulate/${sku.id}`, {
+	return await apiRequest<SimulatorOutput>(`/pricing/simulate/${skuId}`, {
 		method: "POST",
 		body: JSON.stringify({
 			price,
-			competitorPrice,
 			festivalBoost,
 		}),
 	});
@@ -414,12 +395,21 @@ export async function getFestivalData() {
 
 export async function getCompetitorData(skuId: string) {
 	try {
-		return await apiRequest<{
-			sku: SKU;
-			history: CompetitorHistory[];
-			undercutFrequency: number;
-			risk: SKU["competitorRisk"];
-		}>(`/competitor/${skuId}`);
+		return await apiRequest<
+			EngineRecord & {
+				history: CompetitorHistory[];
+				undercutFrequency: number;
+				risk: "High" | "Medium" | "Low";
+			}
+		>(`/competitor/${skuId}`);
+	} catch {
+		return null;
+	}
+}
+
+export async function getPricingAnalysis(skuId: string) {
+	try {
+		return await apiRequest<PricingAnalysisResponse>(`/pricing/${skuId}`);
 	} catch {
 		return null;
 	}
@@ -427,14 +417,14 @@ export async function getCompetitorData(skuId: string) {
 
 export async function getProfitCurve(skuId: string) {
 	try {
-		const [response, sku] = await Promise.all([
-			apiRequest<{
-				skuId: string;
-				profitCurve: { price: number; profit: number }[];
-			}>(`/pricing/${skuId}`),
-			apiRequest<SKU>(`/skus/${skuId}`),
-		]);
-		return { data: response.profitCurve, sku };
+		const response = await apiRequest<PricingAnalysisResponse>(
+			`/pricing/${skuId}`,
+		);
+		return {
+			data: response.optimization.profitCurve,
+			optimization: response.optimization,
+			record: response,
+		};
 	} catch {
 		return null;
 	}
@@ -452,8 +442,8 @@ export async function getInventoryData() {
 	try {
 		return await apiRequest<
 			Array<
-				SKU & {
-					daysUntilStockout: number;
+				EngineRecord & {
+					inventory: number;
 					reorderPoint: number;
 					suggestedOrderQty: number;
 					storageCostImpact: number;
