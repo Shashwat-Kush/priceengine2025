@@ -92,3 +92,103 @@ export type PortfolioDataPoint = {
   profit: number
   marketplace: Marketplace
 }
+
+export type SKUCreateInput = {
+  id: string
+  name: string
+  category: string
+  marketplace: string
+  currentPrice: number
+  cost: number
+  competitorPrice?: number
+  inventory: number
+  dailyDemand: number
+  leadTimeDays: number
+  storageCostPerUnit: number
+  baseDemand: number
+  priceSensitivity: "high" | "medium" | "low"
+  festivalBoostPotential: "high" | "medium" | "low"
+}
+
+export type SKUUpdateInput = Partial<{
+  name: string
+  category: string
+  baseDemand: number
+  priceSensitivity: "high" | "medium" | "low"
+  festivalBoostPotential: "high" | "medium" | "low"
+  marketplace: string
+  currentPrice: number
+  cost: number
+  competitorPrice: number
+  inventory: number
+  dailyDemand: number
+  leadTimeDays: number
+  storageCostPerUnit: number
+}>
+
+export type Listing = {
+  id: string
+  skuId: string
+  marketplace: string
+  currentPrice: number
+  cost: number
+  inventory: number
+  dailyDemand: number
+  leadTimeDays: number
+  storageCostPerUnit: number
+}
+
+export type ListingCreateInput = Omit<Listing, "id"> & { id?: string }
+
+export type ListingUpdateInput = Partial<Omit<Listing, "id">>
+
+export type CompetitorRecord = {
+  id: string
+  listingId: string
+  skuId?: string
+  marketplace?: string
+  name: string
+  price: number
+  rating: number
+  shippingDays: number
+}
+
+export type CompetitorCreateInput = {
+  id?: string
+  listingId: string
+  name: string
+  price: number
+  rating: number
+  shippingDays: number
+}
+
+export type CompetitorUpdateInput = Partial<{
+  listingId: string
+  name: string
+  price: number
+  rating: number
+  shippingDays: number
+}>
+
+export type FestivalCatalogItem = {
+  id: string
+  name: string
+  date: string
+  boost: number
+  platform: string[]
+}
+
+export type FestivalCreateInput = {
+  id?: string
+  name: string
+  date: string
+  boost: number
+  platform: string[]
+}
+
+export type FestivalUpdateInput = Partial<{
+  name: string
+  date: string
+  boost: number
+  platform: string[]
+}>

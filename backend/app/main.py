@@ -20,6 +20,7 @@ from app.routes.competitor_routes import router as competitor_router
 from app.routes.dashboard_routes import router as dashboard_router
 from app.routes.festival_routes import router as festival_router
 from app.routes.inventory_routes import router as inventory_router
+from app.routes.listing_routes import router as listing_router
 from app.routes.pricing_routes import router as pricing_router
 from app.routes.sku_routes import router as sku_router
 
@@ -53,6 +54,7 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(sku_router)
+app.include_router(listing_router)
 app.include_router(pricing_router)
 app.include_router(dashboard_router)
 app.include_router(inventory_router)

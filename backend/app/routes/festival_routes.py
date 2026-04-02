@@ -1,13 +1,81 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.dependencies.auth import get_current_user
 from app.db.mongo import get_database
+from app.schemas.crud_schema import (
+    FestivalCreate,
+    FestivalUpdate,
+    festival_doc_from_create,
+    festival_doc_updates,
+    festival_to_frontend,
+)
 from app.services.catalog_service import list_sku_bundles, to_engine_record
 from app.services.demand_service import estimate_demand
 from app.utils.helpers import days_until
 
 router = APIRouter(tags=["Festival Engine"])
+
+
+@router.get("/festivals/catalog")
+async def list_festival_catalog(
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user=Depends(get_current_user),
+):
+    org_id = str(current_user["org_id"])
+    festivals = await db.festivals.find({"org_id": org_id}).sort("date", 1).to_list(length=None)
+    return [festival_to_frontend(row) for row in festivals]
+
+
+@router.post("/festivals/catalog", status_code=status.HTTP_201_CREATED)
+async def create_festival(
+    payload: FestivalCreate,
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user=Depends(get_current_user),
+):
+    org_id = str(current_user["org_id"])
+
+    doc = festival_doc_from_create(payload, org_id=org_id)
+    if await db.festivals.find_one({"_id": doc["_id"]}, {"_id": 1}):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Festival ID already exists")
+
+    await db.festivals.insert_one(doc)
+    return festival_to_frontend(doc)
+
+
+@router.put("/festivals/catalog/{festival_id}")
+async def update_festival(
+    festival_id: str,
+    payload: FestivalUpdate,
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user=Depends(get_current_user),
+):
+    org_id = str(current_user["org_id"])
+    festival = await db.festivals.find_one({"_id": festival_id, "org_id": org_id})
+    if not festival:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Festival not found")
+
+    updates = festival_doc_updates(payload)
+    if updates:
+        await db.festivals.update_one({"_id": festival_id, "org_id": org_id}, {"$set": updates})
+
+    updated = await db.festivals.find_one({"_id": festival_id, "org_id": org_id})
+    if not updated:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Festival update failed")
+    return festival_to_frontend(updated)
+
+
+@router.delete("/festivals/catalog/{festival_id}")
+async def delete_festival(
+    festival_id: str,
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user=Depends(get_current_user),
+):
+    org_id = str(current_user["org_id"])
+    deleted = await db.festivals.delete_one({"_id": festival_id, "org_id": org_id})
+    if deleted.deleted_count == 0:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Festival not found")
+    return {"deleted": True, "id": festival_id}
 
 @router.get("/festivals")
 async def get_festival_plan(

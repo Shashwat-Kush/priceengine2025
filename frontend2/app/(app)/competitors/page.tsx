@@ -1,9 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getCompetitorData } from "@/lib/services";
-import { SKUS } from "@/lib/mockData";
-import { CompetitorHistory } from "@/lib/types";
+import {
+	createCompetitor,
+	deleteCompetitor,
+	getCompetitorData,
+	getCompetitorItemsBySku,
+	getListingsBySku,
+	getSKUs,
+	updateCompetitor,
+} from "@/lib/services";
+import {
+	CompetitorCreateInput,
+	CompetitorHistory,
+	CompetitorRecord,
+	Listing,
+	SKU,
+} from "@/lib/types";
 import { MarketplaceBadge, RiskIndicator } from "@/components/Badges";
 import {
 	LineChart,
@@ -18,28 +31,174 @@ import {
 import clsx from "clsx";
 import Link from "next/link";
 
+const defaultCompetitorForm: CompetitorCreateInput = {
+	listingId: "",
+	name: "",
+	price: 100,
+	rating: 4,
+	shippingDays: 3,
+};
+
 export default function CompetitorsPage() {
-	const [selectedSkuId, setSelectedSkuId] = useState(SKUS[0].id);
+	const [skuOptions, setSkuOptions] = useState<SKU[]>([]);
+	const [selectedSkuId, setSelectedSkuId] = useState("");
 	const [data, setData] = useState<{
-		sku: (typeof SKUS)[0];
+		sku: SKU;
 		history: CompetitorHistory[];
 		undercutFrequency: number;
 		risk: string;
 	} | null>(null);
+	const [competitors, setCompetitors] = useState<CompetitorRecord[]>([]);
+	const [listings, setListings] = useState<Listing[]>([]);
+	const [form, setForm] = useState<CompetitorCreateInput>(
+		defaultCompetitorForm,
+	);
+	const [editingCompetitorId, setEditingCompetitorId] = useState<
+		string | null
+	>(null);
+	const [submitting, setSubmitting] = useState(false);
 	const [loading, setLoading] = useState(true);
+	const [toast, setToast] = useState<{
+		type: "success" | "error";
+		message: string;
+	} | null>(null);
+
+	const showToast = (type: "success" | "error", message: string) => {
+		setToast({ type, message });
+		window.setTimeout(() => setToast(null), 2800);
+	};
+
+	const loadSkuOptions = async () => {
+		setLoading(true);
+		const skus = await getSKUs();
+		setSkuOptions(skus);
+		setSelectedSkuId((prev) => prev || skus[0]?.id || "");
+		setLoading(false);
+	};
+
+	const loadCompetitorContext = async (skuId: string) => {
+		if (!skuId) {
+			setData(null);
+			setCompetitors([]);
+			setListings([]);
+			return;
+		}
+
+		setLoading(true);
+		const [analysis, competitorRows, listingRows] = await Promise.all([
+			getCompetitorData(skuId),
+			getCompetitorItemsBySku(skuId),
+			getListingsBySku(skuId),
+		]);
+		setData(analysis);
+		setCompetitors(competitorRows);
+		setListings(listingRows);
+		setForm((prev) => ({
+			...prev,
+			listingId: prev.listingId || listingRows[0]?.id || "",
+		}));
+		setLoading(false);
+	};
 
 	useEffect(() => {
-		setLoading(true);
-		getCompetitorData(selectedSkuId).then((d) => {
-			setData(d);
-			setLoading(false);
-		});
+		loadSkuOptions();
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
+
+	useEffect(() => {
+		loadCompetitorContext(selectedSkuId);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [selectedSkuId]);
 
-	const skuOptions = SKUS;
+	const resetForm = () => {
+		setEditingCompetitorId(null);
+		setForm({
+			...defaultCompetitorForm,
+			listingId: listings[0]?.id || "",
+		});
+	};
+
+	const onSubmit = async () => {
+		if (!form.listingId || !form.name.trim()) {
+			showToast("error", "Listing and competitor name are required.");
+			return;
+		}
+
+		setSubmitting(true);
+		try {
+			if (!editingCompetitorId) {
+				await createCompetitor({
+					...form,
+					name: form.name.trim(),
+				});
+				showToast("success", "Competitor created.");
+			} else {
+				await updateCompetitor(editingCompetitorId, {
+					listingId: form.listingId,
+					name: form.name.trim(),
+					price: form.price,
+					rating: form.rating,
+					shippingDays: form.shippingDays,
+				});
+				showToast("success", "Competitor updated.");
+			}
+			resetForm();
+			await loadCompetitorContext(selectedSkuId);
+		} catch (error) {
+			showToast(
+				"error",
+				error instanceof Error ? error.message : "Save failed.",
+			);
+		} finally {
+			setSubmitting(false);
+		}
+	};
+
+	const onEdit = (competitor: CompetitorRecord) => {
+		setEditingCompetitorId(competitor.id);
+		setForm({
+			listingId: competitor.listingId,
+			name: competitor.name,
+			price: competitor.price,
+			rating: competitor.rating,
+			shippingDays: competitor.shippingDays,
+		});
+	};
+
+	const onDelete = async (competitorId: string) => {
+		if (!window.confirm("Delete this competitor record?")) return;
+		try {
+			await deleteCompetitor(competitorId);
+			showToast("success", "Competitor deleted.");
+			await loadCompetitorContext(selectedSkuId);
+			if (editingCompetitorId === competitorId) {
+				resetForm();
+			}
+		} catch (error) {
+			showToast(
+				"error",
+				error instanceof Error ? error.message : "Delete failed.",
+			);
+		}
+	};
 
 	return (
 		<div className="space-y-5">
+			{toast && (
+				<div
+					className={`rounded-lg border px-4 py-2 text-sm ${toast.type === "success" ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-red-50 border-red-200 text-red-700"}`}
+				>
+					{toast.message}
+				</div>
+			)}
+
+			{!loading && skuOptions.length === 0 && (
+				<div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 text-sm text-slate-500">
+					No SKUs found. Create at least one SKU to start competitor
+					tracking.
+				</div>
+			)}
+
 			{/* SKU Selector */}
 			<div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4 flex items-center gap-4">
 				<label className="text-sm font-medium text-slate-600 whitespace-nowrap">
@@ -297,6 +456,205 @@ export default function CompetitorsPage() {
 								: data.sku.competitorRisk === "Medium"
 									? "Hold current price. Monitor competitor activity for the next 5 days before adjusting."
 									: "Your pricing is competitive. No action required."}
+						</div>
+					</div>
+
+					<div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+						<div className="px-5 py-4 border-b border-slate-100">
+							<h3 className="font-semibold text-slate-800">
+								Competitor Records
+							</h3>
+							<p className="text-xs text-slate-500 mt-0.5">
+								Manage competitors per listing with immediate
+								data refresh.
+							</p>
+						</div>
+						<div className="px-5 py-4 border-b border-slate-100 bg-slate-50">
+							<div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+								<label className="text-xs text-slate-600">
+									Listing
+									<select
+										value={form.listingId}
+										onChange={(e) =>
+											setForm((prev) => ({
+												...prev,
+												listingId: e.target.value,
+											}))
+										}
+										className="mt-1 w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm"
+									>
+										{listings.map((listing) => (
+											<option
+												key={listing.id}
+												value={listing.id}
+											>
+												{listing.marketplace} (
+												{listing.id})
+											</option>
+										))}
+									</select>
+								</label>
+								<label className="text-xs text-slate-600">
+									Name
+									<input
+										value={form.name}
+										onChange={(e) =>
+											setForm((prev) => ({
+												...prev,
+												name: e.target.value,
+											}))
+										}
+										className="mt-1 w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm"
+									/>
+								</label>
+								<label className="text-xs text-slate-600">
+									Price
+									<input
+										type="number"
+										value={form.price}
+										onChange={(e) =>
+											setForm((prev) => ({
+												...prev,
+												price: Number(e.target.value),
+											}))
+										}
+										className="mt-1 w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm"
+									/>
+								</label>
+								<label className="text-xs text-slate-600">
+									Rating
+									<input
+										type="number"
+										step="0.1"
+										min={0}
+										max={5}
+										value={form.rating}
+										onChange={(e) =>
+											setForm((prev) => ({
+												...prev,
+												rating: Number(e.target.value),
+											}))
+										}
+										className="mt-1 w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm"
+									/>
+								</label>
+								<label className="text-xs text-slate-600">
+									Shipping Days
+									<input
+										type="number"
+										value={form.shippingDays}
+										onChange={(e) =>
+											setForm((prev) => ({
+												...prev,
+												shippingDays: Number(
+													e.target.value,
+												),
+											}))
+										}
+										className="mt-1 w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm"
+									/>
+								</label>
+							</div>
+							<div className="mt-3 flex items-center gap-2">
+								<button
+									disabled={submitting}
+									onClick={onSubmit}
+									className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-xs font-semibold px-3 py-2 rounded-lg"
+								>
+									{editingCompetitorId
+										? "Save Changes"
+										: "Add Competitor"}
+								</button>
+								{editingCompetitorId && (
+									<button
+										onClick={resetForm}
+										className="text-xs text-slate-600 hover:underline"
+									>
+										Cancel edit
+									</button>
+								)}
+							</div>
+						</div>
+
+						<div className="overflow-x-auto">
+							<table className="w-full text-sm">
+								<thead>
+									<tr className="border-b border-slate-100 bg-slate-50">
+										<th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase">
+											Name
+										</th>
+										<th className="text-left px-3 py-3 text-xs font-semibold text-slate-500 uppercase">
+											Listing
+										</th>
+										<th className="text-right px-3 py-3 text-xs font-semibold text-slate-500 uppercase">
+											Price
+										</th>
+										<th className="text-right px-3 py-3 text-xs font-semibold text-slate-500 uppercase">
+											Rating
+										</th>
+										<th className="text-right px-3 py-3 text-xs font-semibold text-slate-500 uppercase">
+											Shipping
+										</th>
+										<th className="px-3 py-3"></th>
+									</tr>
+								</thead>
+								<tbody>
+									{competitors.map((row) => (
+										<tr
+											key={row.id}
+											className="border-b border-slate-100 last:border-0"
+										>
+											<td className="px-5 py-3.5 font-medium text-slate-800">
+												{row.name}
+											</td>
+											<td className="px-3 py-3.5 text-xs text-slate-500">
+												{row.marketplace || "Listing"} (
+												{row.listingId})
+											</td>
+											<td className="px-3 py-3.5 text-right font-mono">
+												₹{row.price}
+											</td>
+											<td className="px-3 py-3.5 text-right font-mono text-slate-600">
+												{row.rating}
+											</td>
+											<td className="px-3 py-3.5 text-right font-mono text-slate-600">
+												{row.shippingDays}d
+											</td>
+											<td className="px-3 py-3.5 text-right">
+												<div className="flex items-center justify-end gap-2">
+													<button
+														onClick={() =>
+															onEdit(row)
+														}
+														className="text-xs text-blue-600 hover:underline"
+													>
+														Edit
+													</button>
+													<button
+														onClick={() =>
+															onDelete(row.id)
+														}
+														className="text-xs text-red-600 hover:underline"
+													>
+														Delete
+													</button>
+												</div>
+											</td>
+										</tr>
+									))}
+									{competitors.length === 0 && (
+										<tr>
+											<td
+												colSpan={6}
+												className="px-5 py-6 text-sm text-slate-500"
+											>
+												No competitors recorded for this
+												SKU yet.
+											</td>
+										</tr>
+									)}
+								</tbody>
+							</table>
 						</div>
 					</div>
 				</>

@@ -1,11 +1,22 @@
 import {
 	Alert,
+	CompetitorCreateInput,
 	CompetitorHistory,
+	CompetitorRecord,
+	CompetitorUpdateInput,
 	DashboardKPIs,
+	FestivalCatalogItem,
+	FestivalCreateInput,
 	FestivalEvent,
+	FestivalUpdateInput,
+	Listing,
+	ListingCreateInput,
+	ListingUpdateInput,
 	PortfolioDataPoint,
 	RecommendedAction,
 	SKU,
+	SKUCreateInput,
+	SKUUpdateInput,
 	SimulatorOutput,
 } from "./types";
 
@@ -171,6 +182,210 @@ export async function getSKUById(id: string) {
 	} catch {
 		return null;
 	}
+}
+
+export async function createSKU(input: SKUCreateInput) {
+	return await apiRequest<SKU>("/skus", {
+		method: "POST",
+		body: JSON.stringify({
+			id: input.id,
+			name: input.name,
+			category: input.category,
+			base_demand: input.baseDemand,
+			price_sensitivity: input.priceSensitivity,
+			festival_boost_potential: input.festivalBoostPotential,
+			marketplace: input.marketplace,
+			current_price: input.currentPrice,
+			cost: input.cost,
+			competitor_price: input.competitorPrice,
+			inventory: input.inventory,
+			daily_demand: input.dailyDemand,
+			lead_time_days: input.leadTimeDays,
+			storage_cost_per_unit: input.storageCostPerUnit,
+		}),
+	});
+}
+
+export async function updateSKU(skuId: string, input: SKUUpdateInput) {
+	return await apiRequest<SKU>(`/skus/${skuId}`, {
+		method: "PUT",
+		body: JSON.stringify({
+			name: input.name,
+			category: input.category,
+			base_demand: input.baseDemand,
+			price_sensitivity: input.priceSensitivity,
+			festival_boost_potential: input.festivalBoostPotential,
+			marketplace: input.marketplace,
+			current_price: input.currentPrice,
+			cost: input.cost,
+			competitor_price: input.competitorPrice,
+			inventory: input.inventory,
+			daily_demand: input.dailyDemand,
+			lead_time_days: input.leadTimeDays,
+			storage_cost_per_unit: input.storageCostPerUnit,
+		}),
+	});
+}
+
+export async function deleteSKU(skuId: string) {
+	return await apiRequest<{ deleted: boolean; id: string }>(
+		`/skus/${skuId}`,
+		{
+			method: "DELETE",
+		},
+	);
+}
+
+export async function getListingsBySku(skuId: string) {
+	try {
+		return await apiRequest<Listing[]>(
+			`/listings/by-sku/${encodeURIComponent(skuId)}`,
+		);
+	} catch {
+		return [];
+	}
+}
+
+export async function createListing(input: ListingCreateInput) {
+	return await apiRequest<Listing>("/listings", {
+		method: "POST",
+		body: JSON.stringify({
+			id: input.id,
+			sku_id: input.skuId,
+			marketplace: input.marketplace,
+			current_price: input.currentPrice,
+			cost: input.cost,
+			inventory: input.inventory,
+			daily_demand: input.dailyDemand,
+			lead_time_days: input.leadTimeDays,
+			storage_cost_per_unit: input.storageCostPerUnit,
+		}),
+	});
+}
+
+export async function updateListing(
+	listingId: string,
+	input: ListingUpdateInput,
+) {
+	return await apiRequest<Listing>(`/listings/${listingId}`, {
+		method: "PUT",
+		body: JSON.stringify({
+			sku_id: input.skuId,
+			marketplace: input.marketplace,
+			current_price: input.currentPrice,
+			cost: input.cost,
+			inventory: input.inventory,
+			daily_demand: input.dailyDemand,
+			lead_time_days: input.leadTimeDays,
+			storage_cost_per_unit: input.storageCostPerUnit,
+		}),
+	});
+}
+
+export async function deleteListing(listingId: string) {
+	return await apiRequest<{ deleted: boolean; id: string }>(
+		`/listings/${listingId}`,
+		{
+			method: "DELETE",
+		},
+	);
+}
+
+export async function getCompetitorItemsBySku(skuId: string) {
+	try {
+		return await apiRequest<CompetitorRecord[]>(
+			`/competitor/by-sku/${encodeURIComponent(skuId)}`,
+		);
+	} catch {
+		return [];
+	}
+}
+
+export async function createCompetitor(input: CompetitorCreateInput) {
+	return await apiRequest<CompetitorRecord>("/competitor", {
+		method: "POST",
+		body: JSON.stringify({
+			id: input.id,
+			listing_id: input.listingId,
+			name: input.name,
+			price: input.price,
+			rating: input.rating,
+			shipping_days: input.shippingDays,
+		}),
+	});
+}
+
+export async function updateCompetitor(
+	competitorId: string,
+	input: CompetitorUpdateInput,
+) {
+	return await apiRequest<CompetitorRecord>(`/competitor/${competitorId}`, {
+		method: "PUT",
+		body: JSON.stringify({
+			listing_id: input.listingId,
+			name: input.name,
+			price: input.price,
+			rating: input.rating,
+			shipping_days: input.shippingDays,
+		}),
+	});
+}
+
+export async function deleteCompetitor(competitorId: string) {
+	return await apiRequest<{ deleted: boolean; id: string }>(
+		`/competitor/${competitorId}`,
+		{
+			method: "DELETE",
+		},
+	);
+}
+
+export async function getFestivalCatalog() {
+	try {
+		return await apiRequest<FestivalCatalogItem[]>("/festivals/catalog");
+	} catch {
+		return [];
+	}
+}
+
+export async function createFestival(input: FestivalCreateInput) {
+	return await apiRequest<FestivalCatalogItem>("/festivals/catalog", {
+		method: "POST",
+		body: JSON.stringify({
+			id: input.id,
+			name: input.name,
+			date: input.date,
+			boost: input.boost,
+			platform: input.platform,
+		}),
+	});
+}
+
+export async function updateFestival(
+	festivalId: string,
+	input: FestivalUpdateInput,
+) {
+	return await apiRequest<FestivalCatalogItem>(
+		`/festivals/catalog/${festivalId}`,
+		{
+			method: "PUT",
+			body: JSON.stringify({
+				name: input.name,
+				date: input.date,
+				boost: input.boost,
+				platform: input.platform,
+			}),
+		},
+	);
+}
+
+export async function deleteFestival(festivalId: string) {
+	return await apiRequest<{ deleted: boolean; id: string }>(
+		`/festivals/catalog/${festivalId}`,
+		{
+			method: "DELETE",
+		},
+	);
 }
 
 export async function simulatePriceChange(

@@ -1,32 +1,175 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getSKUs } from "@/lib/services";
-import { SKU, Marketplace, Sensitivity, InventoryStatus } from "@/lib/types";
+import {
+	createSKU,
+	deleteSKU,
+	getSKUs,
+	updateSKU,
+} from "@/lib/services";
+import { SKU, SKUCreateInput } from "@/lib/types";
 import {
 	MarketplaceBadge,
-	SensitivityBadge,
 	InventoryBadge,
 	RiskIndicator,
 } from "@/components/Badges";
 import Link from "next/link";
 import { Search, ChevronRight, Filter } from "lucide-react";
 
+const defaultForm: SKUCreateInput = {
+	id: "",
+	name: "",
+	category: "General",
+	marketplace: "Amazon",
+	currentPrice: 100,
+	cost: 50,
+	competitorPrice: 100,
+	inventory: 0,
+	dailyDemand: 1,
+	leadTimeDays: 7,
+	storageCostPerUnit: 5,
+	baseDemand: 1,
+	priceSensitivity: "medium",
+	festivalBoostPotential: "medium",
+};
+
+function normalizeSensitivity(
+	value: string,
+): "high" | "medium" | "low" {
+	const normalized = value.toLowerCase();
+	if (normalized === "high" || normalized === "low") return normalized;
+	return "medium";
+}
+
+function mapSkuToForm(sku: SKU): SKUCreateInput {
+	return {
+		id: sku.id,
+		name: sku.name,
+		category: sku.category,
+		marketplace: sku.marketplace,
+		currentPrice: sku.currentPrice,
+		cost: sku.cost,
+		competitorPrice: sku.competitorPrice,
+		inventory: sku.inventory,
+		dailyDemand: sku.dailyDemand,
+		leadTimeDays: sku.leadTimeDays,
+		storageCostPerUnit: sku.storageCostPerUnit,
+		baseDemand: sku.baseDemand,
+		priceSensitivity: normalizeSensitivity(sku.priceSensitivity),
+		festivalBoostPotential: normalizeSensitivity(
+			sku.festivalBoostPotential,
+		),
+	};
+}
+
 export default function SKUsPage() {
 	const [skus, setSkus] = useState<SKU[]>([]);
 	const [loading, setLoading] = useState(true);
+	const [submitting, setSubmitting] = useState(false);
 	const [search, setSearch] = useState("");
 	const [filterMarketplace, setFilterMarketplace] = useState<string>("");
 	const [filterMargin, setFilterMargin] = useState<string>("");
 	const [filterStatus, setFilterStatus] = useState<string>("");
 	const [filterRisk, setFilterRisk] = useState<string>("");
+	const [modalMode, setModalMode] = useState<"create" | "edit" | null>(null);
+	const [form, setForm] = useState<SKUCreateInput>(defaultForm);
+	const [toast, setToast] = useState<{
+		type: "success" | "error";
+		message: string;
+	} | null>(null);
+
+	const showToast = (type: "success" | "error", message: string) => {
+		setToast({ type, message });
+		window.setTimeout(() => setToast(null), 2800);
+	};
+
+	const loadSkus = async () => {
+		setLoading(true);
+		const data = await getSKUs();
+		setSkus(data);
+		setLoading(false);
+	};
 
 	useEffect(() => {
-		getSKUs().then((data) => {
-			setSkus(data);
-			setLoading(false);
-		});
+		loadSkus();
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
+
+	const openCreateModal = () => {
+		setForm(defaultForm);
+		setModalMode("create");
+	};
+
+	const openEditModal = (sku: SKU) => {
+		setForm(mapSkuToForm(sku));
+		setModalMode("edit");
+	};
+
+	const closeModal = () => {
+		if (submitting) return;
+		setModalMode(null);
+	};
+
+	const submitModal = async () => {
+		if (!form.id.trim() || !form.name.trim()) {
+			showToast("error", "SKU ID and name are required.");
+			return;
+		}
+
+		setSubmitting(true);
+		try {
+			if (modalMode === "create") {
+				await createSKU({
+					...form,
+					id: form.id.trim(),
+					name: form.name.trim(),
+					category: form.category.trim(),
+				});
+				showToast("success", "SKU created successfully.");
+			} else if (modalMode === "edit") {
+				await updateSKU(form.id, {
+					name: form.name.trim(),
+					category: form.category.trim(),
+					baseDemand: form.baseDemand,
+					priceSensitivity: form.priceSensitivity,
+					festivalBoostPotential: form.festivalBoostPotential,
+					marketplace: form.marketplace,
+					currentPrice: form.currentPrice,
+					cost: form.cost,
+					competitorPrice: form.competitorPrice,
+					inventory: form.inventory,
+					dailyDemand: form.dailyDemand,
+					leadTimeDays: form.leadTimeDays,
+					storageCostPerUnit: form.storageCostPerUnit,
+				});
+				showToast("success", "SKU updated successfully.");
+			}
+
+			setModalMode(null);
+			await loadSkus();
+		} catch (error) {
+			showToast(
+				"error",
+				error instanceof Error ? error.message : "Operation failed.",
+			);
+		} finally {
+			setSubmitting(false);
+		}
+	};
+
+	const onDeleteSku = async (skuId: string) => {
+		if (!window.confirm("Delete this SKU and all related data?")) return;
+		try {
+			await deleteSKU(skuId);
+			showToast("success", "SKU deleted.");
+			await loadSkus();
+		} catch (error) {
+			showToast(
+				"error",
+				error instanceof Error ? error.message : "Delete failed.",
+			);
+		}
+	};
 
 	const filtered = skus.filter((sku) => {
 		const matchSearch =
@@ -57,9 +200,23 @@ export default function SKUsPage() {
 
 	return (
 		<div className="space-y-4">
+			{toast && (
+				<div
+					className={`rounded-lg border px-4 py-2 text-sm ${toast.type === "success" ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-red-50 border-red-200 text-red-700"}`}
+				>
+					{toast.message}
+				</div>
+			)}
+
 			{/* Search + Filters */}
 			<div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4">
 				<div className="flex flex-wrap gap-3 items-center">
+					<button
+						onClick={openCreateModal}
+						className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-3 py-2 rounded-lg"
+					>
+						+ New SKU
+					</button>
 					<div className="relative flex-1 min-w-[200px]">
 						<Search
 							size={15}
@@ -255,12 +412,26 @@ export default function SKUsPage() {
 											/>
 										</td>
 										<td className="px-3 py-3.5">
-											<Link
-												href={`/skus/${sku.id}`}
-												className="text-blue-500 hover:text-blue-700 transition-colors"
-											>
-												<ChevronRight size={16} />
-											</Link>
+											<div className="flex items-center gap-2 justify-end">
+												<button
+													onClick={() => openEditModal(sku)}
+													className="text-xs text-blue-600 hover:underline"
+												>
+													Edit
+												</button>
+												<button
+													onClick={() => onDeleteSku(sku.id)}
+													className="text-xs text-red-600 hover:underline"
+												>
+													Delete
+												</button>
+												<Link
+													href={`/skus/${sku.id}`}
+													className="text-blue-500 hover:text-blue-700 transition-colors"
+												>
+													<ChevronRight size={16} />
+												</Link>
+											</div>
 										</td>
 									</tr>
 								))}
@@ -269,6 +440,166 @@ export default function SKUsPage() {
 					</div>
 				)}
 			</div>
+
+			{modalMode && (
+				<div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
+					<div className="w-full max-w-3xl bg-white rounded-xl border border-slate-200 shadow-xl p-5 space-y-4 max-h-[92vh] overflow-auto">
+						<div className="flex items-center justify-between">
+							<h3 className="text-lg font-semibold text-slate-800">
+								{modalMode === "create" ? "Create SKU" : "Edit SKU"}
+							</h3>
+							<button
+								onClick={closeModal}
+								className="text-sm text-slate-500 hover:text-slate-700"
+							>
+								Close
+							</button>
+						</div>
+
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+							<label className="text-sm text-slate-600">
+								SKU ID
+								<input
+									disabled={modalMode === "edit"}
+									value={form.id}
+									onChange={(e) =>
+										setForm((prev) => ({
+											...prev,
+											id: e.target.value,
+										}))
+									}
+									className="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm disabled:bg-slate-100"
+								/>
+							</label>
+							<label className="text-sm text-slate-600">
+								Name
+								<input
+									value={form.name}
+									onChange={(e) =>
+										setForm((prev) => ({
+											...prev,
+											name: e.target.value,
+										}))
+									}
+									className="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+								/>
+							</label>
+							<label className="text-sm text-slate-600">
+								Category
+								<input
+									value={form.category}
+									onChange={(e) =>
+										setForm((prev) => ({
+											...prev,
+											category: e.target.value,
+										}))
+									}
+									className="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+								/>
+							</label>
+							<label className="text-sm text-slate-600">
+								Marketplace
+								<select
+									value={form.marketplace}
+									onChange={(e) =>
+										setForm((prev) => ({
+											...prev,
+											marketplace: e.target.value,
+										}))
+									}
+									className="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+								>
+									<option value="Amazon">Amazon</option>
+									<option value="Flipkart">Flipkart</option>
+									<option value="Meesho">Meesho</option>
+								</select>
+							</label>
+							{[
+								["Current Price", "currentPrice"],
+								["Cost", "cost"],
+								["Competitor Price", "competitorPrice"],
+								["Inventory", "inventory"],
+								["Daily Demand", "dailyDemand"],
+								["Lead Time Days", "leadTimeDays"],
+								["Storage Cost/Unit", "storageCostPerUnit"],
+								["Base Demand", "baseDemand"],
+							].map(([label, key]) => (
+								<label key={key} className="text-sm text-slate-600">
+									{label}
+									<input
+										type="number"
+										value={form[key as keyof SKUCreateInput] as number}
+										onChange={(e) =>
+											setForm((prev) => ({
+												...prev,
+												[key]: Number(e.target.value),
+											}))
+										}
+										className="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+									/>
+								</label>
+							))}
+
+							<label className="text-sm text-slate-600">
+								Price Sensitivity
+								<select
+									value={form.priceSensitivity}
+									onChange={(e) =>
+										setForm((prev) => ({
+											...prev,
+											priceSensitivity: e.target.value as
+												| "high"
+												| "medium"
+												| "low",
+										}))
+									}
+									className="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+								>
+									<option value="high">High</option>
+									<option value="medium">Medium</option>
+									<option value="low">Low</option>
+								</select>
+							</label>
+							<label className="text-sm text-slate-600">
+								Festival Boost Potential
+								<select
+									value={form.festivalBoostPotential}
+									onChange={(e) =>
+										setForm((prev) => ({
+											...prev,
+											festivalBoostPotential: e.target.value as
+												| "high"
+												| "medium"
+												| "low",
+										}))
+									}
+									className="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+								>
+									<option value="high">High</option>
+									<option value="medium">Medium</option>
+									<option value="low">Low</option>
+								</select>
+							</label>
+						</div>
+
+						<div className="flex items-center justify-end gap-2 pt-2">
+							<button
+								onClick={closeModal}
+								className="px-3 py-2 text-sm border border-slate-300 rounded-lg"
+							>
+								Cancel
+							</button>
+							<button
+								disabled={submitting}
+								onClick={submitModal}
+								className="px-3 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white disabled:bg-blue-400"
+							>
+								{submitting ? "Saving..." : "Save"}
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }
