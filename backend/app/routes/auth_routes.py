@@ -13,6 +13,7 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
 class RegisterRequest(BaseModel):
+    name: str | None = Field(default=None, min_length=2, max_length=120)
     email: str
     password: str = Field(min_length=6)
     organization_name: str = Field(min_length=2, max_length=120)
@@ -23,9 +24,26 @@ class LoginRequest(BaseModel):
     password: str = Field(min_length=6)
 
 
+class UpdateProfileRequest(BaseModel):
+    name: str = Field(min_length=2, max_length=120)
+    email: str
+    organization_name: str = Field(min_length=2, max_length=120)
+
+
+def _auth_user_payload(user: dict, org: dict | None) -> dict:
+    return {
+        "id": str(user.get("_id", "")),
+        "name": str(user.get("name", "")),
+        "email": str(user.get("email", "")),
+        "orgId": str(user.get("org_id", "")),
+        "organizationName": str(org.get("name", "")) if org else "",
+    }
+
+
 @router.post("/register")
 async def register(payload: RegisterRequest, db: AsyncIOMotorDatabase = Depends(get_database)):
     email = payload.email.strip().lower()
+    name = (payload.name or email.split("@")[0]).strip()
     if await db.users.find_one({"email": email}):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
 
@@ -42,7 +60,7 @@ async def register(payload: RegisterRequest, db: AsyncIOMotorDatabase = Depends(
     user_doc = {
         "_id": user_id,
         "org_id": org_id,
-        "name": email.split("@")[0],
+        "name": name,
         "email": email,
         "password_hash": hash_password(payload.password),
         "created_at": now,
@@ -67,12 +85,7 @@ async def register(payload: RegisterRequest, db: AsyncIOMotorDatabase = Depends(
 
     return {
         "token": create_token(user_doc),
-        "user": {
-            "id": user_id,
-            "email": email,
-            "orgId": org_id,
-            "organizationName": org_doc["name"],
-        },
+        "user": _auth_user_payload(user_doc, org_doc),
     }
 
 
@@ -92,12 +105,7 @@ async def login(payload: LoginRequest, db: AsyncIOMotorDatabase = Depends(get_da
 
     return {
         "token": create_token(user),
-        "user": {
-            "id": str(user["_id"]),
-            "email": str(user.get("email", "")),
-            "orgId": str(user.get("org_id", "")),
-            "organizationName": str(org.get("name", "")) if org else "",
-        },
+        "user": _auth_user_payload(user, org),
     }
 
 
@@ -107,11 +115,52 @@ async def me(
     db: AsyncIOMotorDatabase = Depends(get_database),
 ):
     org = await db.organizations.find_one({"_id": current_user.get("org_id")})
+    return _auth_user_payload(current_user, org)
+
+
+@router.put("/me")
+async def update_me(
+    payload: UpdateProfileRequest,
+    current_user=Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_database),
+):
+    name = payload.name.strip()
+    email = payload.email.strip().lower()
+    organization_name = payload.organization_name.strip()
+
+    existing_user = await db.users.find_one({"email": email})
+    if existing_user and str(existing_user.get("_id", "")) != str(current_user.get("_id", "")):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
+
+    now = utc_now()
+    await db.users.update_one(
+        {"_id": current_user.get("_id")},
+        {
+            "$set": {
+                "name": name,
+                "email": email,
+                "updated_at": now,
+            }
+        },
+    )
+    await db.organizations.update_one(
+        {"_id": current_user.get("org_id")},
+        {
+            "$set": {
+                "name": organization_name,
+                "updated_at": now,
+            }
+        },
+    )
+
+    updated_user = await db.users.find_one({"_id": current_user.get("_id")})
+    updated_org = await db.organizations.find_one({"_id": current_user.get("org_id")})
+    if not updated_user:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to refresh user profile")
+
     return {
-        "id": str(current_user.get("_id", "")),
-        "email": str(current_user.get("email", "")),
-        "orgId": str(current_user.get("org_id", "")),
-        "organizationName": str(org.get("name", "")) if org else "",
+        "token": create_token(updated_user),
+        "user": _auth_user_payload(updated_user, updated_org),
     }
 
 

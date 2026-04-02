@@ -1,8 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import clsx from "clsx";
 import { CheckCircle2, RefreshCw } from "lucide-react";
+import {
+	getCurrentUserProfile,
+	updateCurrentUserProfile,
+} from "@/lib/services";
 
 function Toggle({
 	value,
@@ -77,12 +81,72 @@ export default function SettingsPage() {
 	const [priceAlerts, setPriceAlerts] = useState(true);
 	const [stockAlerts, setStockAlerts] = useState(true);
 	const [festivalReminders, setFestivalReminders] = useState(true);
+	const [name, setName] = useState("");
+	const [email, setEmail] = useState("");
+	const [organizationName, setOrganizationName] = useState("");
+	const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+	const [isSaving, setIsSaving] = useState(false);
+	const [error, setError] = useState("");
 	const [saved, setSaved] = useState(false);
 
+	useEffect(() => {
+		let isMounted = true;
+
+		const loadProfile = async () => {
+			setError("");
+			try {
+				const profile = await getCurrentUserProfile();
+				if (!isMounted) {
+					return;
+				}
+				setName(profile.name ?? "");
+				setEmail(profile.email ?? "");
+				setOrganizationName(profile.organizationName ?? "");
+			} catch {
+				if (!isMounted) {
+					return;
+				}
+				setError("Unable to load your account details.");
+			} finally {
+				if (isMounted) {
+					setIsLoadingProfile(false);
+				}
+			}
+		};
+
+		void loadProfile();
+
+		return () => {
+			isMounted = false;
+		};
+	}, []);
+
 	const handleSave = async () => {
-		await new Promise((r) => setTimeout(r, 600));
-		setSaved(true);
-		setTimeout(() => setSaved(false), 3000);
+		if (!name.trim() || !email.trim() || !organizationName.trim()) {
+			setError("Name, email, and business name are required.");
+			return;
+		}
+
+		setError("");
+		setSaved(false);
+		setIsSaving(true);
+		try {
+			await updateCurrentUserProfile({
+				name,
+				email,
+				organizationName,
+			});
+			setSaved(true);
+			setTimeout(() => setSaved(false), 3000);
+		} catch (err) {
+			if (err instanceof Error && err.message.includes("409")) {
+				setError("That email address is already in use.");
+			} else {
+				setError("Could not save profile changes. Please try again.");
+			}
+		} finally {
+			setIsSaving(false);
+		}
 	};
 
 	return (
@@ -282,13 +346,20 @@ export default function SettingsPage() {
 			{/* Account */}
 			<Section title="Account" subtitle="Your seller profile">
 				<div className="space-y-3">
+					{error && (
+						<div className="bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg px-3 py-2">
+							{error}
+						</div>
+					)}
 					<div className="grid grid-cols-2 gap-3">
 						<div>
 							<label className="text-xs font-medium text-slate-500 mb-1 block">
 								Name
 							</label>
 							<input
-								defaultValue="Ravi Sharma"
+								value={name}
+								onChange={(e) => setName(e.target.value)}
+								disabled={isLoadingProfile || isSaving}
 								className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
 							/>
 						</div>
@@ -297,7 +368,10 @@ export default function SettingsPage() {
 								Email
 							</label>
 							<input
-								defaultValue="ravi@shop.in"
+								type="email"
+								value={email}
+								onChange={(e) => setEmail(e.target.value)}
+								disabled={isLoadingProfile || isSaving}
 								className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
 							/>
 						</div>
@@ -307,10 +381,18 @@ export default function SettingsPage() {
 							Business Name
 						</label>
 						<input
-							defaultValue="Ravi Electronics & General Store"
+							value={organizationName}
+							onChange={(e) =>
+								setOrganizationName(e.target.value)
+							}
+							disabled={isLoadingProfile || isSaving}
 							className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
 						/>
 					</div>
+					<p className="text-xs text-slate-400">
+						Account and organization details are synced to your active
+						workspace.
+					</p>
 				</div>
 			</Section>
 
@@ -318,8 +400,9 @@ export default function SettingsPage() {
 			<div className="flex justify-end">
 				<button
 					onClick={handleSave}
+					disabled={isLoadingProfile || isSaving}
 					className={clsx(
-						"flex items-center gap-2 px-6 py-2.5 rounded-lg font-semibold text-sm transition-all",
+						"flex items-center gap-2 px-6 py-2.5 rounded-lg font-semibold text-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed",
 						saved
 							? "bg-emerald-600 text-white"
 							: "bg-blue-600 hover:bg-blue-700 text-white",
@@ -329,6 +412,8 @@ export default function SettingsPage() {
 						<>
 							<CheckCircle2 size={16} /> Saved!
 						</>
+					) : isSaving ? (
+						"Saving..."
 					) : (
 						"Save Changes"
 					)}

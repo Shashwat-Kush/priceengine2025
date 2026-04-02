@@ -9,6 +9,7 @@ import { registerUser } from "@/lib/services";
 
 export default function RegisterPage() {
 	const router = useRouter();
+	const [name, setName] = useState("");
 	const [organizationName, setOrganizationName] = useState("");
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
@@ -19,7 +20,7 @@ export default function RegisterPage() {
 
 	const handleRegister = async (e: React.FormEvent) => {
 		e.preventDefault();
-		if (!organizationName || !email || !password || !confirmPassword) {
+		if (!name || !organizationName || !email || !password || !confirmPassword) {
 			setError("Please fill in all fields.");
 			return;
 		}
@@ -37,7 +38,7 @@ export default function RegisterPage() {
 		setError("");
 		setLoading(true);
 		try {
-			await registerUser(email, password, organizationName);
+			await registerUser(name, email, password, organizationName);
 			router.push("/dashboard");
 		} catch (err) {
 			if (err instanceof Error && err.message.includes("409")) {
@@ -78,6 +79,19 @@ export default function RegisterPage() {
 					)}
 
 					<form onSubmit={handleRegister} className="space-y-4">
+						<div>
+							<label className="block text-sm font-medium text-slate-700 mb-1.5">
+								User Name
+							</label>
+							<input
+								type="text"
+								value={name}
+								onChange={(e) => setName(e.target.value)}
+								placeholder="Ravi Sharma"
+								className="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+							/>
+						</div>
+
 						<div>
 							<label className="block text-sm font-medium text-slate-700 mb-1.5">
 								Organization Name

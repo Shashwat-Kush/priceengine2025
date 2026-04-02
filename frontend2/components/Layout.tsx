@@ -34,6 +34,7 @@ export function Sidebar() {
 	const pathname = usePathname();
 	const user = getAuthUser();
 	const displayName = useMemo(() => {
+		if (user?.name?.trim()) return user.name.trim();
 		if (!user?.email) return "Signed-in user";
 		return user.email.split("@")[0];
 	}, [user]);
@@ -126,6 +127,7 @@ export function TopBar({
 	const [showDropdown, setShowDropdown] = useState(false);
 	const user = getAuthUser();
 	const displayName = useMemo(() => {
+		if (user?.name?.trim()) return user.name.trim();
 		if (!user?.email) return "Account";
 		return user.email.split("@")[0];
 	}, [user]);
@@ -180,8 +182,9 @@ export function TopBar({
 							<hr className="my-1 border-slate-100" />
 							<button
 								onClick={handleSignOut}
-								className="block px-4 py-2 text-sm text-red-600 hover:bg-slate-50"
+								className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
 							>
+								<LogOut size={14} />
 								Sign Out
 							</button>
 						</div>

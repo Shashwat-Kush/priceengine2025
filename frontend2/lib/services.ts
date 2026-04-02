@@ -29,6 +29,7 @@ const AUTH_USER_KEY = "priceiq.auth.user";
 
 export type AuthUser = {
 	id: string;
+	name?: string;
 	email: string;
 	orgId: string;
 	organizationName?: string;
@@ -92,6 +93,7 @@ export async function loginWithPassword(email: string, password: string) {
 }
 
 export async function registerUser(
+	name: string,
 	email: string,
 	password: string,
 	organizationName: string,
@@ -99,6 +101,7 @@ export async function registerUser(
 	const response = await apiRequest<AuthResponse>("/auth/register", {
 		method: "POST",
 		body: JSON.stringify({
+			name: name.trim(),
 			email: email.trim().toLowerCase(),
 			password,
 			organization_name: organizationName,
@@ -106,6 +109,32 @@ export async function registerUser(
 	});
 	setAuthSession(response.token, response.user);
 	return response;
+}
+
+export async function getCurrentUserProfile() {
+	const profile = await apiRequest<AuthUser>("/auth/me");
+	const token = getAuthToken();
+	if (isJwtToken(token)) {
+		setAuthSession(token, profile);
+	}
+	return profile;
+}
+
+export async function updateCurrentUserProfile(input: {
+	name: string;
+	email: string;
+	organizationName: string;
+}) {
+	const response = await apiRequest<AuthResponse>("/auth/me", {
+		method: "PUT",
+		body: JSON.stringify({
+			name: input.name.trim(),
+			email: input.email.trim().toLowerCase(),
+			organization_name: input.organizationName.trim(),
+		}),
+	});
+	setAuthSession(response.token, response.user);
+	return response.user;
 }
 
 export async function logoutUser() {
