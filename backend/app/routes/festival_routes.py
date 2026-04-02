@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
+from app.dependencies.auth import get_current_user
 from app.db.mongo import get_database
 from app.services.catalog_service import list_sku_bundles, to_engine_record
 from app.services.demand_service import estimate_demand
@@ -9,10 +10,14 @@ from app.utils.helpers import days_until
 router = APIRouter(tags=["Festival Engine"])
 
 @router.get("/festivals")
-async def get_festival_plan(db: AsyncIOMotorDatabase = Depends(get_database)):
-    bundles = await list_sku_bundles(db)
+async def get_festival_plan(
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user=Depends(get_current_user),
+):
+    org_id = str(current_user["org_id"])
+    bundles = await list_sku_bundles(db, org_id=org_id)
     records = [to_engine_record(bundle) for bundle in bundles]
-    festivals = await db.festivals.find().sort("_id", 1).to_list(length=None)
+    festivals = await db.festivals.find({"org_id": org_id}).sort("_id", 1).to_list(length=None)
 
     events = []
     for fest in festivals:

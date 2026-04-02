@@ -1,30 +1,133 @@
 import {
-	SKUS,
-	DASHBOARD_KPIS,
-	RECOMMENDED_ACTIONS,
-	ALERTS,
-	FESTIVAL_EVENTS,
-	getCompetitorHistory,
-	getProfitCurveData,
-	getPortfolioData,
-} from "./mockData";
-import { SKU, SimulatorOutput } from "./types";
+	Alert,
+	CompetitorHistory,
+	DashboardKPIs,
+	FestivalEvent,
+	PortfolioDataPoint,
+	RecommendedAction,
+	SKU,
+	SimulatorOutput,
+} from "./types";
 
-const delay = (ms = 600) => new Promise((res) => setTimeout(res, ms));
 const API_BASE_URL =
 	process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
+const AUTH_TOKEN_KEY = "priceiq.auth.token";
+const AUTH_USER_KEY = "priceiq.auth.user";
+
+export type AuthUser = {
+	id: string;
+	email: string;
+	orgId: string;
+	organizationName?: string;
+};
+
+type AuthResponse = {
+	token: string;
+	user: AuthUser;
+};
+
+function isBrowser() {
+	return typeof window !== "undefined";
+}
+
+function isJwtToken(token: string | null): token is string {
+	return !!token && token.split(".").length === 3;
+}
+
+export function getAuthToken(): string | null {
+	if (!isBrowser()) return null;
+	return window.localStorage.getItem(AUTH_TOKEN_KEY);
+}
+
+function setAuthSession(token: string, user: AuthUser) {
+	if (!isBrowser()) return;
+	window.localStorage.setItem(AUTH_TOKEN_KEY, token);
+	window.localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
+}
+
+export function getAuthUser(): AuthUser | null {
+	if (!isBrowser()) return null;
+	const raw = window.localStorage.getItem(AUTH_USER_KEY);
+	if (!raw) return null;
+
+	try {
+		return JSON.parse(raw) as AuthUser;
+	} catch {
+		return null;
+	}
+}
+
+export function clearAuthSession() {
+	if (!isBrowser()) return;
+	window.localStorage.removeItem(AUTH_TOKEN_KEY);
+	window.localStorage.removeItem(AUTH_USER_KEY);
+}
+
+export function hasClientSession() {
+	if (!isBrowser()) return false;
+	return isJwtToken(window.localStorage.getItem(AUTH_TOKEN_KEY));
+}
+
+export async function loginWithPassword(email: string, password: string) {
+	const normalizedEmail = email.trim().toLowerCase();
+	const response = await apiRequest<AuthResponse>("/auth/login", {
+		method: "POST",
+		body: JSON.stringify({ email: normalizedEmail, password }),
+	});
+	setAuthSession(response.token, response.user);
+	return response;
+}
+
+export async function registerUser(
+	email: string,
+	password: string,
+	organizationName: string,
+) {
+	const response = await apiRequest<AuthResponse>("/auth/register", {
+		method: "POST",
+		body: JSON.stringify({
+			email: email.trim().toLowerCase(),
+			password,
+			organization_name: organizationName,
+		}),
+	});
+	setAuthSession(response.token, response.user);
+	return response;
+}
+
+export async function logoutUser() {
+	try {
+		if (hasClientSession()) {
+			await apiRequest<{ success: boolean }>("/auth/logout", {
+				method: "POST",
+			});
+		}
+	} catch {
+		// Token may already be expired/invalid; local cleanup still applies.
+	} finally {
+		clearAuthSession();
+	}
+}
+
 async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
+	const token = getAuthToken();
+	const headers = new Headers(init?.headers ?? {});
+	headers.set("Content-Type", "application/json");
+	if (isJwtToken(token)) {
+		headers.set("Authorization", `Bearer ${token}`);
+	}
+
 	const response = await fetch(`${API_BASE_URL}${path}`, {
 		...init,
-		headers: {
-			"Content-Type": "application/json",
-			...(init?.headers ?? {}),
-		},
+		headers,
 		cache: "no-store",
 	});
 
 	if (!response.ok) {
+		if (response.status === 401) {
+			clearAuthSession();
+		}
 		const detail = await response.text();
 		throw new Error(`API ${response.status}: ${detail}`);
 	}
@@ -35,16 +138,21 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
 export async function getDashboardData() {
 	try {
 		return await apiRequest<{
-			kpis: typeof DASHBOARD_KPIS;
-			recommendedActions: typeof RECOMMENDED_ACTIONS;
-			alerts: typeof ALERTS;
+			kpis: DashboardKPIs;
+			recommendedActions: RecommendedAction[];
+			alerts: Alert[];
 		}>("/dashboard");
 	} catch {
-		await delay();
 		return {
-			kpis: DASHBOARD_KPIS,
-			recommendedActions: RECOMMENDED_ACTIONS,
-			alerts: ALERTS,
+			kpis: {
+				totalRevenue: 0,
+				totalProfit: 0,
+				missedProfit: 0,
+				inventoryAlerts: 0,
+				undercutAlerts: 0,
+			},
+			recommendedActions: [],
+			alerts: [],
 		};
 	}
 }
@@ -53,8 +161,7 @@ export async function getSKUs() {
 	try {
 		return await apiRequest<SKU[]>("/skus");
 	} catch {
-		await delay(500);
-		return SKUS;
+		return [];
 	}
 }
 
@@ -62,8 +169,7 @@ export async function getSKUById(id: string) {
 	try {
 		return await apiRequest<SKU>(`/skus/${id}`);
 	} catch {
-		await delay(400);
-		return SKUS.find((s) => s.id === id) ?? null;
+		return null;
 	}
 }
 
@@ -73,69 +179,21 @@ export async function simulatePriceChange(
 	competitorPrice: number,
 	festivalBoost: boolean,
 ): Promise<SimulatorOutput> {
-	try {
-		return await apiRequest<SimulatorOutput>(
-			`/pricing/simulate/${sku.id}`,
-			{
-				method: "POST",
-				body: JSON.stringify({
-					price,
-					competitorPrice,
-					festivalBoost,
-				}),
-			},
-		);
-	} catch {
-		await delay(300);
-		const sensitivityFactor =
-			sku.priceSensitivity === "High"
-				? 0.08
-				: sku.priceSensitivity === "Medium"
-					? 0.04
-					: 0.015;
-		let demand = Math.max(
-			0,
-			sku.baseDemand - (price - competitorPrice) * sensitivityFactor,
-		);
-		if (festivalBoost) {
-			demand =
-				demand *
-				(sku.festivalBoostPotential === "High"
-					? 1.6
-					: sku.festivalBoostPotential === "Medium"
-						? 1.3
-						: 1.1);
-		}
-		const dailyDemand = Math.round(demand * 10) / 10;
-		const revenue = Math.round(price * dailyDemand * 30);
-		const profit = Math.round((price - sku.cost) * dailyDemand * 30);
-		const daysUntilStockout =
-			dailyDemand > 0 ? Math.floor(sku.inventory / dailyDemand) : 999;
-		const stockoutDate =
-			daysUntilStockout >= 999
-				? "No stockout risk"
-				: new Date(
-						Date.now() + daysUntilStockout * 86400000,
-					).toLocaleDateString("en-IN", {
-						day: "2-digit",
-						month: "short",
-						year: "numeric",
-					});
-		return {
-			expectedUnits: Math.round(dailyDemand * 30),
-			revenue,
-			profit,
-			stockoutDate,
-		};
-	}
+	return await apiRequest<SimulatorOutput>(`/pricing/simulate/${sku.id}`, {
+		method: "POST",
+		body: JSON.stringify({
+			price,
+			competitorPrice,
+			festivalBoost,
+		}),
+	});
 }
 
 export async function getFestivalData() {
 	try {
-		return await apiRequest<typeof FESTIVAL_EVENTS>("/festivals");
+		return await apiRequest<FestivalEvent[]>("/festivals");
 	} catch {
-		await delay(500);
-		return FESTIVAL_EVENTS;
+		return [];
 	}
 }
 
@@ -143,53 +201,35 @@ export async function getCompetitorData(skuId: string) {
 	try {
 		return await apiRequest<{
 			sku: SKU;
-			history: ReturnType<typeof getCompetitorHistory>;
+			history: CompetitorHistory[];
 			undercutFrequency: number;
 			risk: SKU["competitorRisk"];
 		}>(`/competitor/${skuId}`);
 	} catch {
-		await delay(500);
-		const sku = SKUS.find((s) => s.id === skuId);
-		if (!sku) return null;
-		const history = getCompetitorHistory(skuId);
-		const undercutCount = history.filter(
-			(h) => h.competitorPrice < h.ourPrice,
-		).length;
-		return {
-			sku,
-			history,
-			undercutFrequency: Math.round(
-				(undercutCount / history.length) * 100,
-			),
-			risk: sku.competitorRisk,
-		};
+		return null;
 	}
 }
 
 export async function getProfitCurve(skuId: string) {
 	try {
-		const response = await apiRequest<{
-			skuId: string;
-			profitCurve: { price: number; profit: number }[];
-		}>(`/pricing/${skuId}`);
-		const sku = SKUS.find((s) => s.id === skuId) ?? null;
+		const [response, sku] = await Promise.all([
+			apiRequest<{
+				skuId: string;
+				profitCurve: { price: number; profit: number }[];
+			}>(`/pricing/${skuId}`),
+			apiRequest<SKU>(`/skus/${skuId}`),
+		]);
 		return { data: response.profitCurve, sku };
 	} catch {
-		await delay(300);
-		const sku = SKUS.find((s) => s.id === skuId);
-		if (!sku) return null;
-		return { data: getProfitCurveData(sku), sku };
+		return null;
 	}
 }
 
 export async function getPortfolioAnalytics() {
 	try {
-		return await apiRequest<ReturnType<typeof getPortfolioData>>(
-			"/portfolio",
-		);
+		return await apiRequest<PortfolioDataPoint[]>("/portfolio");
 	} catch {
-		await delay(500);
-		return getPortfolioData();
+		return [];
 	}
 }
 
@@ -207,27 +247,6 @@ export async function getInventoryData() {
 			>
 		>("/inventory");
 	} catch {
-		await delay(400);
-		return SKUS.map((sku) => {
-			const daysUntilStockout =
-				sku.dailyDemand > 0
-					? Math.floor(sku.inventory / sku.dailyDemand)
-					: 999;
-			const reorderPoint = sku.dailyDemand * sku.leadTimeDays * 1.2;
-			const suggestedOrderQty = Math.max(
-				0,
-				Math.ceil(reorderPoint * 2 - sku.inventory),
-			);
-			return {
-				...sku,
-				daysUntilStockout,
-				reorderPoint: Math.round(reorderPoint),
-				suggestedOrderQty,
-				storageCostImpact: Math.round(
-					suggestedOrderQty * sku.storageCostPerUnit,
-				),
-				orderCost: Math.round(suggestedOrderQty * sku.cost),
-			};
-		});
+		return [];
 	}
 }

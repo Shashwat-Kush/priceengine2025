@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import clsx from "clsx";
+import { getAuthUser, logoutUser } from "@/lib/services";
 import {
 	LayoutDashboard,
 	Package,
@@ -16,7 +17,7 @@ import {
 	ChevronDown,
 	Bell,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 const navItems = [
 	{ href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -29,7 +30,24 @@ const navItems = [
 ];
 
 export function Sidebar() {
+	const router = useRouter();
 	const pathname = usePathname();
+	const user = getAuthUser();
+	const displayName = useMemo(() => {
+		if (!user?.email) return "Signed-in user";
+		return user.email.split("@")[0];
+	}, [user]);
+	const initials = useMemo(() => {
+		const name = displayName.trim();
+		if (!name) return "U";
+		return name.slice(0, 2).toUpperCase();
+	}, [displayName]);
+
+	const handleSignOut = async () => {
+		await logoutUser();
+		router.replace("/login");
+	};
+
 	return (
 		<aside className="w-60 shrink-0 bg-slate-900 text-white flex flex-col min-h-screen">
 			<div className="px-6 py-5 border-b border-slate-700">
@@ -74,24 +92,24 @@ export function Sidebar() {
 			<div className="px-3 py-4 border-t border-slate-700">
 				<div className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800 cursor-pointer text-sm">
 					<div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold">
-						RS
+						{initials}
 					</div>
 					<div className="flex-1 min-w-0">
 						<p className="text-white text-xs font-medium truncate">
-							Ravi Sharma
+							{displayName}
 						</p>
 						<p className="text-slate-500 text-xs truncate">
-							ravi@shop.in
+							{user?.email ?? ""}
 						</p>
 					</div>
 				</div>
-				<Link
-					href="/login"
+				<button
+					onClick={handleSignOut}
 					className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white cursor-pointer text-sm mt-1 transition-colors"
 				>
 					<LogOut size={14} />
 					Sign Out
-				</Link>
+				</button>
 			</div>
 		</aside>
 	);
@@ -104,7 +122,25 @@ export function TopBar({
 	title: string;
 	subtitle?: string;
 }) {
+	const router = useRouter();
 	const [showDropdown, setShowDropdown] = useState(false);
+	const user = getAuthUser();
+	const displayName = useMemo(() => {
+		if (!user?.email) return "Account";
+		return user.email.split("@")[0];
+	}, [user]);
+	const initials = useMemo(() => {
+		const name = displayName.trim();
+		if (!name) return "U";
+		return name.slice(0, 2).toUpperCase();
+	}, [displayName]);
+
+	const handleSignOut = async () => {
+		await logoutUser();
+		setShowDropdown(false);
+		router.replace("/login");
+	};
+
 	return (
 		<header className="h-16 bg-white border-b border-slate-200 flex items-center px-6 gap-4 shrink-0">
 			<div className="flex-1">
@@ -126,10 +162,10 @@ export function TopBar({
 						className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors"
 					>
 						<div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold">
-							RS
+							{initials}
 						</div>
 						<span className="text-sm text-slate-700 font-medium">
-							Ravi Sharma
+							{displayName}
 						</span>
 						<ChevronDown size={14} className="text-slate-400" />
 					</button>
@@ -142,12 +178,12 @@ export function TopBar({
 								Settings
 							</Link>
 							<hr className="my-1 border-slate-100" />
-							<Link
-								href="/login"
+							<button
+								onClick={handleSignOut}
 								className="block px-4 py-2 text-sm text-red-600 hover:bg-slate-50"
 							>
 								Sign Out
-							</Link>
+							</button>
 						</div>
 					)}
 				</div>

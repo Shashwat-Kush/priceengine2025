@@ -1,7 +1,9 @@
 "use client";
 
 import { Sidebar, TopBar } from "@/components/Layout";
-import { usePathname } from "next/navigation";
+import { hasClientSession } from "@/lib/services";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 const pageTitles: Record<string, { title: string; subtitle?: string }> = {
 	"/dashboard": {
@@ -29,7 +31,22 @@ const pageTitles: Record<string, { title: string; subtitle?: string }> = {
 };
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
+	const router = useRouter();
 	const pathname = usePathname();
+	const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+	useEffect(() => {
+		if (!hasClientSession()) {
+			router.replace("/login");
+			return;
+		}
+		setIsCheckingAuth(false);
+	}, [router]);
+
+	if (isCheckingAuth) {
+		return null;
+	}
+
 	const base = "/" + pathname.split("/")[1];
 	const meta = pageTitles[base] ?? { title: "PriceIQ" };
 

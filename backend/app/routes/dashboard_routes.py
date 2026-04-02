@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
+from app.dependencies.auth import get_current_user
 from app.db.mongo import get_database
 from app.schemas.sku_schema import sku_to_frontend
 from app.services.catalog_service import list_sku_bundles, to_engine_record
@@ -10,15 +11,23 @@ router = APIRouter(tags=["Dashboard Aggregation"])
 
 
 @router.get("/dashboard")
-async def get_dashboard(db: AsyncIOMotorDatabase = Depends(get_database)):
-    bundles = await list_sku_bundles(db)
+async def get_dashboard(
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user=Depends(get_current_user),
+):
+    org_id = str(current_user["org_id"])
+    bundles = await list_sku_bundles(db, org_id=org_id)
     records = [to_engine_record(bundle) for bundle in bundles]
     return build_dashboard_payload(records)
 
 
 @router.get("/portfolio")
-async def get_portfolio(db: AsyncIOMotorDatabase = Depends(get_database)):
-    bundles = await list_sku_bundles(db)
+async def get_portfolio(
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user=Depends(get_current_user),
+):
+    org_id = str(current_user["org_id"])
+    bundles = await list_sku_bundles(db, org_id=org_id)
 
     rows = []
     for bundle in bundles:

@@ -2,16 +2,23 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { TrendingUp, Eye, EyeOff } from "lucide-react"
+import { hasClientSession, loginWithPassword } from "@/lib/services"
 
 export default function LoginPage() {
   const router = useRouter()
-  const [email, setEmail] = useState("ravi@shop.in")
-  const [password, setPassword] = useState("password123")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+
+  useEffect(() => {
+    if (hasClientSession()) {
+      router.replace("/dashboard")
+    }
+  }, [router])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -21,9 +28,14 @@ export default function LoginPage() {
     }
     setError("")
     setLoading(true)
-    await new Promise((r) => setTimeout(r, 800))
-    setLoading(false)
-    router.push("/dashboard")
+    try {
+      await loginWithPassword(email, password)
+      router.push("/dashboard")
+    } catch {
+      setError("Invalid email or password.")
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -96,15 +108,11 @@ export default function LoginPage() {
 
           <p className="text-center text-sm text-slate-500 mt-6">
             Don&apos;t have an account?{" "}
-            <Link href="#" className="text-blue-600 font-medium hover:underline">
+            <Link href="/register" className="text-blue-600 font-medium hover:underline">
               Sign up for free
             </Link>
           </p>
         </div>
-
-        <p className="text-center text-xs text-slate-500 mt-4">
-          Demo credentials pre-filled. Just click Sign In.
-        </p>
       </div>
     </div>
   )

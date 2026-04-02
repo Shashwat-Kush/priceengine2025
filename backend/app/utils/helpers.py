@@ -57,28 +57,9 @@ def days_until(date_str: str) -> int:
     return max((target - today).days, 0)
 
 
-def default_seed_payload() -> Dict[str, List[Dict[str, Any]]]:
+def default_seed_payload(org_id: str) -> Dict[str, List[Dict[str, Any]]]:
     now = utc_now()
-
-    organizations = [
-        {
-            "_id": "org-001",
-            "name": "Demo Organization",
-            "created_at": now,
-            "updated_at": now,
-        }
-    ]
-
-    users = [
-        {
-            "_id": "user-001",
-            "org_id": "org-001",
-            "name": "Demo User",
-            "email": "demo@pricing.local",
-            "created_at": now,
-            "updated_at": now,
-        }
-    ]
+    seed_suffix = (org_id or "org").replace("org-", "")[:8] or "org"
 
     sku_rows = [
         ("sku-001", "boAt Airdopes 141", "Electronics", 8.0, "high", "high"),
@@ -93,11 +74,12 @@ def default_seed_payload() -> Dict[str, List[Dict[str, Any]]]:
     competitors: List[Dict[str, Any]] = []
 
     for idx, row in enumerate(sku_rows, start=1):
-        sku_id, name, category, base_demand, sensitivity, fest_boost = row
+        base_sku_id, name, category, base_demand, sensitivity, fest_boost = row
+        sku_id = f"{base_sku_id}-{seed_suffix}"
         skus.append(
             {
                 "_id": sku_id,
-                "org_id": "org-001",
+                "org_id": org_id,
                 "name": name,
                 "category": category,
                 "base_demand": float(base_demand),
@@ -121,7 +103,7 @@ def default_seed_payload() -> Dict[str, List[Dict[str, Any]]]:
             {
                 "_id": amazon_listing_id,
                 "sku_id": sku_id,
-                "org_id": "org-001",
+                "org_id": org_id,
                 "marketplace": "Amazon",
                 "current_price": float(base_price),
                 "cost": float(base_cost),
@@ -137,7 +119,7 @@ def default_seed_payload() -> Dict[str, List[Dict[str, Any]]]:
             {
                 "_id": flipkart_listing_id,
                 "sku_id": sku_id,
-                "org_id": "org-001",
+                "org_id": org_id,
                 "marketplace": "Flipkart",
                 "current_price": float(round(base_price * 0.97, 2)),
                 "cost": float(round(base_cost * 0.99, 2)),
@@ -161,7 +143,7 @@ def default_seed_payload() -> Dict[str, List[Dict[str, Any]]]:
                     {
                         "_id": f"cmp-{listing_id}-{c_idx + 1}",
                         "listing_id": listing_id,
-                        "org_id": "org-001",
+                        "org_id": org_id,
                         "name": f"Competitor {c_idx + 1}",
                         "price": float(round(list_price * (1.0 + shift), 2)),
                         "rating": float(round(3.8 + (c_idx * 0.4), 1)),
@@ -172,8 +154,8 @@ def default_seed_payload() -> Dict[str, List[Dict[str, Any]]]:
 
     festivals = [
         {
-            "_id": "festival-diwali",
-            "org_id": "org-001",
+            "_id": f"festival-diwali-{seed_suffix}",
+            "org_id": org_id,
             "name": "Diwali",
             "date": "2026-10-20",
             "boost": 1.4,
@@ -182,8 +164,8 @@ def default_seed_payload() -> Dict[str, List[Dict[str, Any]]]:
             "updated_at": now,
         },
         {
-            "_id": "festival-big-billion-days",
-            "org_id": "org-001",
+            "_id": f"festival-big-billion-days-{seed_suffix}",
+            "org_id": org_id,
             "name": "Big Billion Days",
             "date": "2026-04-14",
             "boost": 1.6,
@@ -192,8 +174,8 @@ def default_seed_payload() -> Dict[str, List[Dict[str, Any]]]:
             "updated_at": now,
         },
         {
-            "_id": "festival-independence-day-sale",
-            "org_id": "org-001",
+            "_id": f"festival-independence-day-sale-{seed_suffix}",
+            "org_id": org_id,
             "name": "Independence Day Sale",
             "date": "2026-08-15",
             "boost": 1.3,
@@ -204,8 +186,6 @@ def default_seed_payload() -> Dict[str, List[Dict[str, Any]]]:
     ]
 
     return {
-        "organizations": organizations,
-        "users": users,
         "skus": skus,
         "listings": listings,
         "competitors": competitors,

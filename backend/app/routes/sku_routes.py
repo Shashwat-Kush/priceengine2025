@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
+from app.dependencies.auth import get_current_user
 from app.db.mongo import get_database
 from app.schemas.sku_schema import (
     SKUCreate,
@@ -12,31 +13,48 @@ from app.schemas.sku_schema import (
     sku_doc_updates,
     sku_to_frontend,
 )
-from app.services.catalog_service import get_default_org_id, get_sku_bundle, list_sku_bundles, to_engine_record
+from app.services.catalog_service import (
+    get_sku_bundle_scoped,
+    list_sku_bundles,
+    to_engine_record,
+)
 
 router = APIRouter(prefix="/skus", tags=["SKU Management"])
 
 
 @router.get("")
-async def list_skus(db: AsyncIOMotorDatabase = Depends(get_database)):
-    bundles = await list_sku_bundles(db)
+async def list_skus(
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user=Depends(get_current_user),
+):
+    org_id = str(current_user["org_id"])
+    bundles = await list_sku_bundles(db, org_id=org_id)
     return [sku_to_frontend(to_engine_record(bundle)) for bundle in bundles]
 
 
 @router.get("/{sku_id}")
-async def get_sku(sku_id: str, db: AsyncIOMotorDatabase = Depends(get_database)):
-    bundle = await get_sku_bundle(db, sku_id)
+async def get_sku(
+    sku_id: str,
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user=Depends(get_current_user),
+):
+    org_id = str(current_user["org_id"])
+    bundle = await get_sku_bundle_scoped(db, sku_id=sku_id, org_id=org_id)
     if not bundle:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="SKU not found")
     return sku_to_frontend(to_engine_record(bundle))
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
-async def create_sku(payload: SKUCreate, db: AsyncIOMotorDatabase = Depends(get_database)):
-    if await db.skus.find_one({"_id": payload.id}):
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="SKU already exists")
+async def create_sku(
+    payload: SKUCreate,
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user=Depends(get_current_user),
+):
+    org_id = str(current_user["org_id"])
 
-    org_id = await get_default_org_id(db)
+    if await db.skus.find_one({"_id": payload.id, "org_id": org_id}):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="SKU already exists")
 
     doc = sku_doc_from_create(payload)
     doc["org_id"] = org_id
@@ -53,7 +71,7 @@ async def create_sku(payload: SKUCreate, db: AsyncIOMotorDatabase = Depends(get_
     if competitor_docs:
         await db.competitors.insert_many(competitor_docs)
 
-    bundle = await get_sku_bundle(db, payload.id)
+    bundle = await get_sku_bundle_scoped(db, sku_id=payload.id, org_id=org_id)
     if not bundle:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="SKU creation failed")
     return sku_to_frontend(to_engine_record(bundle))
@@ -64,29 +82,37 @@ async def update_sku(
     sku_id: str,
     payload: SKUUpdate,
     db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user=Depends(get_current_user),
 ):
-    bundle = await get_sku_bundle(db, sku_id)
+    org_id = str(current_user["org_id"])
+
+    bundle = await get_sku_bundle_scoped(db, sku_id=sku_id, org_id=org_id)
     if not bundle:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="SKU not found")
 
     updates = sku_doc_updates(payload)
     if updates:
-        await db.skus.update_one({"_id": sku_id}, {"$set": updates})
+        await db.skus.update_one({"_id": sku_id, "org_id": org_id}, {"$set": updates})
 
     primary_listing = bundle.get("primary_listing")
     listing_updates = listing_doc_updates(payload)
     if primary_listing and listing_updates:
-        await db.listings.update_one({"_id": primary_listing["_id"]}, {"$set": listing_updates})
+        await db.listings.update_one(
+            {"_id": primary_listing["_id"], "org_id": org_id},
+            {"$set": listing_updates},
+        )
 
     if payload.competitor_price is not None and primary_listing:
-        first_comp = await db.competitors.find_one({"listing_id": primary_listing["_id"]}, sort=[("_id", 1)])
+        first_comp = await db.competitors.find_one(
+            {"listing_id": primary_listing["_id"], "org_id": org_id},
+            sort=[("_id", 1)],
+        )
         if first_comp:
             await db.competitors.update_one(
-                {"_id": first_comp["_id"]},
+                {"_id": first_comp["_id"], "org_id": org_id},
                 {"$set": {"price": float(payload.competitor_price)}},
             )
         else:
-            org_id = str(bundle["sku"].get("org_id") or await get_default_org_id(db))
             docs = competitor_docs_from_price(
                 listing_id=str(primary_listing["_id"]),
                 org_id=org_id,
@@ -95,25 +121,31 @@ async def update_sku(
             if docs:
                 await db.competitors.insert_many(docs)
 
-    updated_bundle = await get_sku_bundle(db, sku_id)
+    updated_bundle = await get_sku_bundle_scoped(db, sku_id=sku_id, org_id=org_id)
     if not updated_bundle:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="SKU update failed")
     return sku_to_frontend(to_engine_record(updated_bundle))
 
 
 @router.delete("/{sku_id}")
-async def delete_sku(sku_id: str, db: AsyncIOMotorDatabase = Depends(get_database)):
+async def delete_sku(
+    sku_id: str,
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user=Depends(get_current_user),
+):
+    org_id = str(current_user["org_id"])
+
     listing_ids = [
         str(row["_id"])
-        for row in await db.listings.find({"sku_id": sku_id}, {"_id": 1}).to_list(length=None)
+        for row in await db.listings.find({"sku_id": sku_id, "org_id": org_id}, {"_id": 1}).to_list(length=None)
     ]
 
-    deleted = await db.skus.delete_one({"_id": sku_id})
+    deleted = await db.skus.delete_one({"_id": sku_id, "org_id": org_id})
     if deleted.deleted_count == 0:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="SKU not found")
 
-    await db.listings.delete_many({"sku_id": sku_id})
+    await db.listings.delete_many({"sku_id": sku_id, "org_id": org_id})
     if listing_ids:
-        await db.competitors.delete_many({"listing_id": {"$in": listing_ids}})
+        await db.competitors.delete_many({"listing_id": {"$in": listing_ids}, "org_id": org_id})
 
     return {"deleted": True, "id": sku_id}

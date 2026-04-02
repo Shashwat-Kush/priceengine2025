@@ -2,7 +2,7 @@ from typing import Any, Dict, List, Optional
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from app.utils.helpers import normalize_sensitivity, utc_now
+from app.utils.helpers import normalize_sensitivity
 
 
 def _marketplace_priority(marketplace: str) -> int:
@@ -45,34 +45,29 @@ def choose_primary_listing(listings: List[Dict[str, Any]]) -> Optional[Dict[str,
     )[0]
 
 
-async def get_default_org_id(db: AsyncIOMotorDatabase) -> str:
-    org = await db.organizations.find_one(sort=[("_id", 1)])
-    if org:
-        return str(org["_id"])
+async def list_sku_bundles(db: AsyncIOMotorDatabase, org_id: Optional[str] = None) -> List[Dict[str, Any]]:
+    sku_filter: Dict[str, Any] = {}
+    if org_id:
+        sku_filter["org_id"] = org_id
 
-    now = utc_now()
-    org_doc = {
-        "_id": "org-001",
-        "name": "Demo Organization",
-        "created_at": now,
-        "updated_at": now,
-    }
-    await db.organizations.insert_one(org_doc)
-    return str(org_doc["_id"])
-
-
-async def list_sku_bundles(db: AsyncIOMotorDatabase) -> List[Dict[str, Any]]:
-    skus = await db.skus.find().sort("_id", 1).to_list(length=None)
+    skus = await db.skus.find(sku_filter).sort("_id", 1).to_list(length=None)
     sku_ids = [str(row.get("_id")) for row in skus]
 
     listings: List[Dict[str, Any]] = []
     competitors: List[Dict[str, Any]] = []
 
     if sku_ids:
-        listings = await db.listings.find({"sku_id": {"$in": sku_ids}}).to_list(length=None)
+        listing_filter: Dict[str, Any] = {"sku_id": {"$in": sku_ids}}
+        if org_id:
+            listing_filter["org_id"] = org_id
+
+        listings = await db.listings.find(listing_filter).to_list(length=None)
         listing_ids = [str(row.get("_id")) for row in listings]
         if listing_ids:
-            competitors = await db.competitors.find({"listing_id": {"$in": listing_ids}}).to_list(length=None)
+            competitor_filter: Dict[str, Any] = {"listing_id": {"$in": listing_ids}}
+            if org_id:
+                competitor_filter["org_id"] = org_id
+            competitors = await db.competitors.find(competitor_filter).to_list(length=None)
 
     listings_by_sku = _group_by(listings, "sku_id")
     competitors_by_listing = _group_by(competitors, "listing_id")
@@ -109,11 +104,58 @@ async def list_sku_bundles(db: AsyncIOMotorDatabase) -> List[Dict[str, Any]]:
 
 
 async def get_sku_bundle(db: AsyncIOMotorDatabase, sku_id: str) -> Optional[Dict[str, Any]]:
-    bundles = await list_sku_bundles(db)
-    for bundle in bundles:
-        if str(bundle["sku"].get("_id")) == sku_id:
-            return bundle
-    return None
+    return await get_sku_bundle_scoped(db, sku_id=sku_id, org_id=None)
+
+
+async def get_sku_bundle_scoped(
+    db: AsyncIOMotorDatabase,
+    sku_id: str,
+    org_id: Optional[str],
+) -> Optional[Dict[str, Any]]:
+    sku_filter: Dict[str, Any] = {"_id": sku_id}
+    if org_id:
+        sku_filter["org_id"] = org_id
+
+    sku = await db.skus.find_one(sku_filter)
+    if not sku:
+        return None
+
+    listing_filter: Dict[str, Any] = {"sku_id": sku_id}
+    if org_id:
+        listing_filter["org_id"] = org_id
+
+    listings = await db.listings.find(listing_filter).to_list(length=None)
+    primary_listing = choose_primary_listing(listings)
+
+    competitors: List[Dict[str, Any]] = []
+    competitors_by_listing: Dict[str, List[Dict[str, Any]]] = {}
+    listing_ids = [str(row.get("_id")) for row in listings]
+    if listing_ids:
+        competitor_filter: Dict[str, Any] = {"listing_id": {"$in": listing_ids}}
+        if org_id:
+            competitor_filter["org_id"] = org_id
+        competitors = await db.competitors.find(competitor_filter).to_list(length=None)
+        competitors_by_listing = _group_by(competitors, "listing_id")
+
+    primary_competitors: List[Dict[str, Any]] = []
+    if primary_listing is not None:
+        primary_competitors = competitors_by_listing.get(str(primary_listing.get("_id")), [])
+
+    fallback_price = float(primary_listing.get("current_price", 0.0)) if primary_listing else 0.0
+    min_comp_price, avg_comp_price = _aggregate_competitor_prices(primary_competitors, fallback_price)
+
+    return {
+        "sku": sku,
+        "listings": listings,
+        "primary_listing": primary_listing,
+        "primary_competitors": primary_competitors,
+        "competitors_by_listing": {
+            str(listing.get("_id")): competitors_by_listing.get(str(listing.get("_id")), [])
+            for listing in listings
+        },
+        "min_comp_price": min_comp_price,
+        "avg_comp_price": avg_comp_price,
+    }
 
 
 def to_engine_record(bundle: Dict[str, Any]) -> Dict[str, Any]:
