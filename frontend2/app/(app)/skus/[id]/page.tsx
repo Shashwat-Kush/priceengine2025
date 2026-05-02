@@ -140,6 +140,7 @@ export default function SKUDetailPage({
 	}
 
 	const sku = record.sku;
+	const skuFeatures = Object.entries(sku.features ?? {});
 	const optimization = pricing?.optimization;
 	const primaryPrice = record.listing?.price ?? 0;
 
@@ -152,40 +153,81 @@ export default function SKUDetailPage({
 				>
 					<ArrowLeft size={14} /> Back to SKU Manager
 				</Link>
-				<div className="flex items-start justify-between gap-4">
-					<div>
-						<h2 className="text-xl font-bold text-slate-800">
-							{sku.name}
-						</h2>
-						<div className="flex items-center gap-2 mt-1.5">
-							<span className="text-xs text-slate-400">
-								{sku.category} · {sku.id}
-							</span>
-							<SensitivityBadge value={sku.demandScale} />
-							<SensitivityBadge value={sku.priceSensitivity} />
-							<SensitivityBadge value={sku.festivalSensitivity} />
+				<div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-cyan-50 via-white to-blue-50 p-4 md:p-5">
+					<div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-blue-100/60 blur-2xl" />
+					<div className="relative flex flex-col lg:flex-row lg:items-start gap-4">
+						<div className="w-full max-w-[220px]">
+							<div className="aspect-square rounded-xl overflow-hidden border border-slate-200 bg-white shadow-sm">
+								{sku.imageUrl ? (
+									<img
+										src={sku.imageUrl}
+										alt={sku.name}
+										className="w-full h-full object-cover"
+									/>
+								) : (
+									<div className="w-full h-full bg-gradient-to-br from-blue-100 via-cyan-50 to-emerald-100 flex flex-col items-center justify-center text-blue-700">
+										<span className="text-3xl font-bold">
+											{sku.name.slice(0, 2).toUpperCase()}
+										</span>
+										<span className="text-xs text-blue-600 mt-2 px-3 text-center">
+											Add image URL in SKU edit to brand this view
+										</span>
+									</div>
+								)}
+							</div>
 						</div>
+
+						<div className="flex-1 min-w-0">
+							<h2 className="text-xl font-bold text-slate-800">
+								{sku.name}
+							</h2>
+							<div className="flex flex-wrap items-center gap-2 mt-1.5">
+								<span className="text-xs text-slate-500">
+									{sku.category} · {sku.id}
+								</span>
+								<SensitivityBadge value={sku.demandScale} />
+								<SensitivityBadge value={sku.priceSensitivity} />
+								<SensitivityBadge value={sku.festivalSensitivity} />
+							</div>
+							<p className="text-sm text-slate-600 mt-3 leading-relaxed">
+								{sku.description?.trim() ||
+									"No product description yet. Add one in Edit SKU to improve catalog context."}
+							</p>
+							{skuFeatures.length > 0 && (
+								<div className="mt-3 flex flex-wrap gap-2">
+									{skuFeatures.map(([key, value]) => (
+										<span
+											key={`${key}-${value}`}
+											className="text-xs px-2.5 py-1 rounded-full bg-white border border-slate-200 text-slate-700"
+										>
+											<strong>{key}:</strong> {value}
+										</span>
+									))}
+								</div>
+							)}
+						</div>
+
+						{optimization && (
+							<div className="grid grid-cols-2 gap-2 text-right shrink-0 lg:min-w-[260px]">
+								<div className="bg-white rounded-lg border border-slate-200 px-4 py-2">
+									<p className="text-xs text-slate-500">
+										Current Price
+									</p>
+									<p className="font-bold text-slate-800 text-lg">
+										₹{optimization.currentPrice}
+									</p>
+								</div>
+								<div className="bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-2">
+									<p className="text-xs text-emerald-600">
+										Optimal Price
+									</p>
+									<p className="font-bold text-emerald-700 text-lg">
+										₹{optimization.optimalPrice}
+									</p>
+								</div>
+							</div>
+						)}
 					</div>
-					{optimization && (
-						<div className="grid grid-cols-2 gap-2 text-right shrink-0">
-							<div className="bg-white rounded-lg border border-slate-200 px-4 py-2">
-								<p className="text-xs text-slate-500">
-									Current Price
-								</p>
-								<p className="font-bold text-slate-800 text-lg">
-									₹{optimization.currentPrice}
-								</p>
-							</div>
-							<div className="bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-2">
-								<p className="text-xs text-emerald-600">
-									Optimal Price
-								</p>
-								<p className="font-bold text-emerald-700 text-lg">
-									₹{optimization.optimalPrice}
-								</p>
-							</div>
-						</div>
-					)}
 				</div>
 			</div>
 

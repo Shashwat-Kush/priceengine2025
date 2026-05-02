@@ -4,22 +4,57 @@ import { useEffect, useState } from "react";
 import { createSKU, deleteSKU, getSKUs, updateSKU } from "@/lib/services";
 import { EngineRecord, SKUCreateInput, SKUProfile } from "@/lib/types";
 import Link from "next/link";
-import { ChevronRight, Filter, Search } from "lucide-react";
+import { ChevronRight, Filter, Plus, Search, Trash2 } from "lucide-react";
+
+type FeatureRow = {
+	key: string;
+	value: string;
+};
 
 const defaultForm: SKUCreateInput = {
 	id: "",
 	name: "",
 	category: "General",
+	description: "",
+	features: {},
+	imageUrl: "",
 	demandScale: "medium",
 	priceSensitivity: "medium",
 	festivalSensitivity: "medium",
 };
+
+const blankFeature: FeatureRow = { key: "", value: "" };
+
+function featuresToRows(features?: Record<string, string>): FeatureRow[] {
+	const entries = Object.entries(features ?? {})
+		.map(([key, value]) => ({
+			key: key.trim(),
+			value: String(value ?? "").trim(),
+		}))
+		.filter((item) => item.key && item.value);
+
+	return entries.length > 0 ? entries : [blankFeature];
+}
+
+function rowsToFeatures(rows: FeatureRow[]): Record<string, string> {
+	const mapped: Record<string, string> = {};
+	for (const row of rows) {
+		const key = row.key.trim();
+		const value = row.value.trim();
+		if (!key || !value) continue;
+		mapped[key] = value;
+	}
+	return mapped;
+}
 
 function mapSkuToForm(sku: SKUProfile): SKUCreateInput {
 	return {
 		id: sku.id,
 		name: sku.name,
 		category: sku.category,
+		description: sku.description ?? "",
+		features: sku.features ?? {},
+		imageUrl: sku.imageUrl ?? "",
 		demandScale: sku.demandScale.toLowerCase() as "low" | "medium" | "high",
 		priceSensitivity: sku.priceSensitivity.toLowerCase() as
 			| "low"
@@ -43,6 +78,9 @@ export default function SKUsPage() {
 
 	const [modalMode, setModalMode] = useState<"create" | "edit" | null>(null);
 	const [form, setForm] = useState<SKUCreateInput>(defaultForm);
+	const [featureRows, setFeatureRows] = useState<FeatureRow[]>([
+		blankFeature,
+	]);
 	const [toast, setToast] = useState<{
 		type: "success" | "error";
 		message: string;
@@ -66,11 +104,14 @@ export default function SKUsPage() {
 
 	const openCreateModal = () => {
 		setForm(defaultForm);
+		setFeatureRows([blankFeature]);
 		setModalMode("create");
 	};
 
 	const openEditModal = (sku: SKUProfile) => {
-		setForm(mapSkuToForm(sku));
+		const mapped = mapSkuToForm(sku);
+		setForm(mapped);
+		setFeatureRows(featuresToRows(mapped.features));
 		setModalMode("edit");
 	};
 
@@ -85,6 +126,10 @@ export default function SKUsPage() {
 			return;
 		}
 
+		const normalizedDescription = (form.description ?? "").trim();
+		const normalizedImageUrl = (form.imageUrl ?? "").trim();
+		const normalizedFeatures = rowsToFeatures(featureRows);
+
 		setSubmitting(true);
 		try {
 			if (modalMode === "create") {
@@ -93,12 +138,18 @@ export default function SKUsPage() {
 					id: form.id.trim(),
 					name: form.name.trim(),
 					category: form.category.trim(),
+					description: normalizedDescription,
+					features: normalizedFeatures,
+					imageUrl: normalizedImageUrl,
 				});
 				showToast("success", "SKU created successfully.");
 			} else if (modalMode === "edit") {
 				await updateSKU(form.id, {
 					name: form.name.trim(),
 					category: form.category.trim(),
+					description: normalizedDescription,
+					features: normalizedFeatures,
+					imageUrl: normalizedImageUrl,
 					demandScale: form.demandScale,
 					priceSensitivity: form.priceSensitivity,
 					festivalSensitivity: form.festivalSensitivity,
@@ -130,6 +181,29 @@ export default function SKUsPage() {
 				error instanceof Error ? error.message : "Delete failed.",
 			);
 		}
+	};
+
+	const addFeatureRow = () => {
+		setFeatureRows((prev) => [...prev, { ...blankFeature }]);
+	};
+
+	const updateFeatureRow = (
+		index: number,
+		field: keyof FeatureRow,
+		value: string,
+	) => {
+		setFeatureRows((prev) =>
+			prev.map((row, idx) =>
+				idx === index ? { ...row, [field]: value } : row,
+			),
+		);
+	};
+
+	const removeFeatureRow = (index: number) => {
+		setFeatureRows((prev) => {
+			const next = prev.filter((_, idx) => idx !== index);
+			return next.length > 0 ? next : [{ ...blankFeature }];
+		});
 	};
 
 	const filtered = records.filter((record) => {
@@ -244,6 +318,16 @@ export default function SKUsPage() {
 							<tbody>
 								{filtered.map((record) => {
 									const sku = record.sku;
+									const description = sku.description?.trim()
+										? sku.description.trim()
+										: "No description provided yet.";
+									const compactDescription =
+										description.length > 90
+											? `${description.slice(0, 90)}...`
+											: description;
+									const featureCount = Object.keys(
+										sku.features ?? {},
+									).length;
 									return (
 										<tr
 											key={sku.id}
@@ -254,13 +338,57 @@ export default function SKUsPage() {
 													href={`/skus/${sku.id}`}
 													className="block"
 												>
-													<p className="font-medium text-slate-800 hover:text-blue-600">
-														{sku.name}
-													</p>
-													<p className="text-xs text-slate-400 mt-0.5">
-														{sku.category} ·{" "}
-														{sku.id}
-													</p>
+													<div className="flex items-start gap-3">
+														<div className="w-14 h-14 rounded-lg overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
+															{sku.imageUrl ? (
+																<img
+																	src={
+																		sku.imageUrl
+																	}
+																	alt={
+																		sku.name
+																	}
+																	className="w-full h-full object-cover"
+																/>
+															) : (
+																<div className="w-full h-full bg-gradient-to-br from-blue-100 via-cyan-50 to-emerald-100 text-blue-700 text-xs font-semibold flex items-center justify-center">
+																	{sku.name
+																		.slice(
+																			0,
+																			2,
+																		)
+																		.toUpperCase()}
+																</div>
+															)}
+														</div>
+														<div>
+															<p className="font-medium text-slate-800 hover:text-blue-600">
+																{sku.name}
+															</p>
+															<p className="text-xs text-slate-400 mt-0.5">
+																{sku.category} ·{" "}
+																{sku.id}
+															</p>
+															<p className="text-xs text-slate-500 mt-1">
+																{
+																	compactDescription
+																}
+															</p>
+															{featureCount >
+																0 && (
+																<p className="text-[11px] text-blue-600 mt-1 font-medium">
+																	{
+																		featureCount
+																	}{" "}
+																	feature
+																	{featureCount >
+																	1
+																		? "s"
+																		: ""}
+																</p>
+															)}
+														</div>
+													</div>
 												</Link>
 											</td>
 											<td className="px-3 py-3.5 text-slate-700 font-medium">
@@ -310,8 +438,8 @@ export default function SKUsPage() {
 			</div>
 
 			{modalMode && (
-				<div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
-					<div className="w-full max-w-2xl bg-white rounded-xl border border-slate-200 shadow-xl p-5 space-y-4">
+				<div className="fixed inset-0 z-50 bg-slate-900/50 flex items-start justify-center p-4 overflow-y-auto">
+					<div className="w-full max-w-2xl max-h-[calc(100vh-3rem)] overflow-y-auto bg-white rounded-xl border border-slate-200 shadow-xl p-5 space-y-4">
 						<div className="flex items-center justify-between">
 							<h3 className="text-lg font-semibold text-slate-800">
 								{modalMode === "create"
@@ -367,6 +495,92 @@ export default function SKUsPage() {
 									className="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
 								/>
 							</label>
+							<label className="text-sm text-slate-600 md:col-span-2">
+								Description
+								<textarea
+									value={form.description ?? ""}
+									onChange={(e) =>
+										setForm((prev) => ({
+											...prev,
+											description: e.target.value,
+										}))
+									}
+									rows={3}
+									placeholder="Short product description shown on optimization pages"
+									className="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+								/>
+							</label>
+							<label className="text-sm text-slate-600 md:col-span-2">
+								Image URL
+								<input
+									value={form.imageUrl ?? ""}
+									onChange={(e) =>
+										setForm((prev) => ({
+											...prev,
+											imageUrl: e.target.value,
+										}))
+									}
+									placeholder="https://images.example.com/sku.jpg"
+									className="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+								/>
+							</label>
+
+							<div className="md:col-span-2 border border-slate-200 rounded-lg p-3 bg-slate-50/50">
+								<div className="flex items-center justify-between mb-2">
+									<p className="text-sm font-medium text-slate-700">
+										Features (key-value)
+									</p>
+									<button
+										type="button"
+										onClick={addFeatureRow}
+										className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700"
+									>
+										<Plus size={13} /> Add Feature
+									</button>
+								</div>
+								<div className="space-y-2">
+									{featureRows.map((row, idx) => (
+										<div
+											key={`feature-${idx}`}
+											className="grid grid-cols-[1fr_1fr_auto] gap-2"
+										>
+											<input
+												value={row.key}
+												onChange={(e) =>
+													updateFeatureRow(
+														idx,
+														"key",
+														e.target.value,
+													)
+												}
+												placeholder="Feature"
+												className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"
+											/>
+											<input
+												value={row.value}
+												onChange={(e) =>
+													updateFeatureRow(
+														idx,
+														"value",
+														e.target.value,
+													)
+												}
+												placeholder="Value"
+												className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"
+											/>
+											<button
+												type="button"
+												onClick={() =>
+													removeFeatureRow(idx)
+												}
+												className="px-2 py-2 text-slate-400 hover:text-red-600"
+											>
+												<Trash2 size={14} />
+											</button>
+										</div>
+									))}
+								</div>
+							</div>
 							<label className="text-sm text-slate-600">
 								Demand Scale
 								<select

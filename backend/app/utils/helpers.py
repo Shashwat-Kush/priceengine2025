@@ -62,11 +62,86 @@ def default_seed_payload(org_id: str) -> Dict[str, List[Dict[str, Any]]]:
     seed_suffix = (org_id or "org").replace("org-", "")[:8] or "org"
 
     sku_rows = [
-        ("sku-001", "boAt Airdopes 141", "Electronics", "medium", "high", "high"),
-        ("sku-002", "Prestige Iron 1000W", "Appliances", "low", "medium", "medium"),
-        ("sku-003", "Mamaearth Vitamin C Serum", "Skincare", "high", "high", "high"),
-        ("sku-004", "Bajaj Mixer 500W", "Appliances", "low", "low", "high"),
-        ("sku-005", "Lakme Compact Powder", "Beauty", "high", "high", "medium"),
+        {
+            "base_id": "sku-001",
+            "name": "boAt Airdopes 141",
+            "category": "Electronics",
+            "demand_scale": "medium",
+            "price_sensitivity": "high",
+            "festival_sensitivity": "high",
+            "description": "True wireless earbuds with bass-heavy tuning and all-day battery backup.",
+            "features": {
+                "Battery": "42h total playback",
+                "Bluetooth": "v5.1",
+                "Water Resistance": "IPX4",
+                "Low Latency": "Gaming mode",
+            },
+            "image_url": "https://picsum.photos/seed/boat-airdopes-141/640/640",
+        },
+        {
+            "base_id": "sku-002",
+            "name": "Prestige Iron 1000W",
+            "category": "Appliances",
+            "demand_scale": "low",
+            "price_sensitivity": "medium",
+            "festival_sensitivity": "medium",
+            "description": "Lightweight dry iron with non-stick soleplate for daily home use.",
+            "features": {
+                "Power": "1000W",
+                "Soleplate": "Non-stick coating",
+                "Weight": "Lightweight body",
+                "Warranty": "2 years",
+            },
+            "image_url": "https://picsum.photos/seed/prestige-iron-1000w/640/640",
+        },
+        {
+            "base_id": "sku-003",
+            "name": "Mamaearth Vitamin C Serum",
+            "category": "Skincare",
+            "demand_scale": "high",
+            "price_sensitivity": "high",
+            "festival_sensitivity": "high",
+            "description": "Brightening face serum with vitamin C and turmeric for daily glow care.",
+            "features": {
+                "Volume": "30 ml",
+                "Skin Type": "All skin types",
+                "Key Ingredient": "Vitamin C",
+                "Use": "AM/PM routine",
+            },
+            "image_url": "https://picsum.photos/seed/mamaearth-vitamin-c-serum/640/640",
+        },
+        {
+            "base_id": "sku-004",
+            "name": "Bajaj Mixer 500W",
+            "category": "Appliances",
+            "demand_scale": "low",
+            "price_sensitivity": "low",
+            "festival_sensitivity": "high",
+            "description": "Compact mixer grinder for chutney, masala, and smoothie prep in small kitchens.",
+            "features": {
+                "Power": "500W motor",
+                "Jars": "3 stainless steel jars",
+                "Speed": "3 speed controls",
+                "Safety": "Overload protection",
+            },
+            "image_url": "https://picsum.photos/seed/bajaj-mixer-500w/640/640",
+        },
+        {
+            "base_id": "sku-005",
+            "name": "Lakme Compact Powder",
+            "category": "Beauty",
+            "demand_scale": "high",
+            "price_sensitivity": "high",
+            "festival_sensitivity": "medium",
+            "description": "Daily wear compact powder with matte finish and SPF for quick touch-ups.",
+            "features": {
+                "Finish": "Matte",
+                "SPF": "SPF 23",
+                "Coverage": "Buildable",
+                "Applicator": "Included puff",
+            },
+            "image_url": "https://picsum.photos/seed/lakme-compact-powder/640/640",
+        },
     ]
 
     skus: List[Dict[str, Any]] = []
@@ -74,17 +149,19 @@ def default_seed_payload(org_id: str) -> Dict[str, List[Dict[str, Any]]]:
     competitors: List[Dict[str, Any]] = []
 
     for idx, row in enumerate(sku_rows, start=1):
-        base_sku_id, name, category, demand_scale, sensitivity, fest_sensitivity = row
-        sku_id = f"{base_sku_id}-{seed_suffix}"
+        sku_id = f"{row['base_id']}-{seed_suffix}"
         skus.append(
             {
                 "_id": sku_id,
                 "org_id": org_id,
-                "name": name,
-                "category": category,
-                "demand_scale": demand_scale,
-                "price_sensitivity": normalize_sensitivity(sensitivity),
-                "festival_sensitivity": normalize_sensitivity(fest_sensitivity),
+                "name": row["name"],
+                "category": row["category"],
+                "description": row["description"],
+                "features": row["features"],
+                "image_url": row["image_url"],
+                "demand_scale": row["demand_scale"],
+                "price_sensitivity": normalize_sensitivity(row["price_sensitivity"]),
+                "festival_sensitivity": normalize_sensitivity(row["festival_sensitivity"]),
                 "created_at": now,
                 "updated_at": now,
             }

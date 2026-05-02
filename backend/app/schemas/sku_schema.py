@@ -23,6 +23,22 @@ def map_base_demand_to_scale(base_demand: Optional[float]) -> str:
     return "high"
 
 
+def normalize_features(value: Any) -> Dict[str, str]:
+    if value is None:
+        return {}
+    if not isinstance(value, dict):
+        return {}
+
+    normalized: Dict[str, str] = {}
+    for raw_key, raw_val in value.items():
+        key = str(raw_key).strip()
+        val = str(raw_val).strip()
+        if not key or not val:
+            continue
+        normalized[key[:80]] = val[:220]
+    return normalized
+
+
 class SKUCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -32,6 +48,9 @@ class SKUCreate(BaseModel):
     demand_scale: str = "medium"
     price_sensitivity: str = "medium"
     festival_sensitivity: str = "medium"
+    description: Optional[str] = Field(default=None, max_length=1200)
+    features: Dict[str, str] = Field(default_factory=dict)
+    image_url: Optional[str] = Field(default=None, max_length=2000)
 
     @field_validator("id", "name", "category", mode="before")
     @classmethod
@@ -48,6 +67,19 @@ class SKUCreate(BaseModel):
     def _norm_sensitivity(cls, value: str) -> str:
         return normalize_sensitivity(str(value))
 
+    @field_validator("description", "image_url", mode="before")
+    @classmethod
+    def _trim_optional_text(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        cleaned = str(value).strip()
+        return cleaned or None
+
+    @field_validator("features", mode="before")
+    @classmethod
+    def _norm_features(cls, value: Any) -> Dict[str, str]:
+        return normalize_features(value)
+
 
 class SKUUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -57,6 +89,9 @@ class SKUUpdate(BaseModel):
     demand_scale: Optional[str] = None
     price_sensitivity: Optional[str] = None
     festival_sensitivity: Optional[str] = None
+    description: Optional[str] = Field(default=None, max_length=1200)
+    features: Optional[Dict[str, str]] = None
+    image_url: Optional[str] = Field(default=None, max_length=2000)
 
     @field_validator("name", "category", mode="before")
     @classmethod
@@ -79,6 +114,20 @@ class SKUUpdate(BaseModel):
             return None
         return normalize_sensitivity(str(value))
 
+    @field_validator("description", "image_url", mode="before")
+    @classmethod
+    def _trim_optional_long_text(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        return str(value).strip()
+
+    @field_validator("features", mode="before")
+    @classmethod
+    def _norm_optional_features(cls, value: Any) -> Optional[Dict[str, str]]:
+        if value is None:
+            return None
+        return normalize_features(value)
+
 
 class PriceSimulationRequest(BaseModel):
     price: float = Field(gt=0)
@@ -96,6 +145,9 @@ def sku_doc_from_create(payload: SKUCreate) -> Dict[str, Any]:
         "demand_scale": normalize_demand_scale(data.get("demand_scale", "medium")),
         "price_sensitivity": normalize_sensitivity(data.get("price_sensitivity", "medium")),
         "festival_sensitivity": normalize_sensitivity(data.get("festival_sensitivity", "medium")),
+        "description": data.get("description"),
+        "features": normalize_features(data.get("features")),
+        "image_url": data.get("image_url"),
         "created_at": now,
         "updated_at": now,
     }
@@ -109,6 +161,8 @@ def sku_doc_updates(payload: SKUUpdate) -> Dict[str, Any]:
         updates["price_sensitivity"] = normalize_sensitivity(str(updates["price_sensitivity"]))
     if "festival_sensitivity" in updates:
         updates["festival_sensitivity"] = normalize_sensitivity(str(updates["festival_sensitivity"]))
+    if "features" in updates:
+        updates["features"] = normalize_features(updates["features"])
     if updates:
         updates["updated_at"] = utc_now()
     return updates
@@ -122,6 +176,9 @@ def sku_to_frontend(doc: Dict[str, Any]) -> Dict[str, Any]:
         "id": str(doc.get("_id", "")),
         "name": str(doc.get("name", "Unnamed SKU")),
         "category": str(doc.get("category", "General")),
+        "description": str(doc.get("description", "") or ""),
+        "features": normalize_features(doc.get("features")),
+        "imageUrl": str(doc.get("image_url", "") or ""),
         "demandScale": to_title_sensitivity(demand_scale),
         "priceSensitivity": to_title_sensitivity(str(doc.get("price_sensitivity", "medium"))),
         "festivalSensitivity": to_title_sensitivity(festival),

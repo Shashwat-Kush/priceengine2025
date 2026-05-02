@@ -7,6 +7,9 @@ export type SKUProfile = {
 	id: string;
 	name: string;
 	category: string;
+	description?: string;
+	features?: Record<string, string>;
+	imageUrl?: string;
 	demandScale: Sensitivity;
 	priceSensitivity: Sensitivity;
 	festivalSensitivity: Sensitivity;
@@ -135,6 +138,9 @@ export type SKUCreateInput = {
 	id: string;
 	name: string;
 	category: string;
+	description?: string;
+	features?: Record<string, string>;
+	imageUrl?: string;
 	demandScale: "low" | "medium" | "high";
 	priceSensitivity: "low" | "medium" | "high";
 	festivalSensitivity: "low" | "medium" | "high";
@@ -143,6 +149,9 @@ export type SKUCreateInput = {
 export type SKUUpdateInput = Partial<{
 	name: string;
 	category: string;
+	description: string;
+	features: Record<string, string>;
+	imageUrl: string;
 	demandScale: "low" | "medium" | "high";
 	priceSensitivity: "low" | "medium" | "high";
 	festivalSensitivity: "low" | "medium" | "high";
