@@ -59,3 +59,30 @@ def estimate_demand(
 
     demand = base * price_effect * competition_effect * multiplier
     return max(round(demand, 2), 0.0)
+
+
+def adjust_demand_from_base(
+    base_mean: float,
+    base_variance: float,
+    price: float,
+    price_sensitivity: str,
+    avg_comp_price: float,
+    min_comp_price: float,
+    festival_multiplier: float,
+) -> tuple[float, float]:
+    """Adjust normalized base demand using price, competition, and festival context."""
+    safe_mean = max(float(base_mean), 0.0)
+    safe_variance = max(float(base_variance), 0.0)
+    safe_price = max(float(price), 0.0)
+
+    alpha = _alpha_for_sensitivity(price_sensitivity)
+    scaled_price = safe_price / 100.0
+    price_effect = exp(-alpha * scaled_price)
+    competition_effect = _competition_effect(safe_price, avg_comp_price, min_comp_price)
+    multiplier = max(float(festival_multiplier), 0.0)
+
+    combined = price_effect * competition_effect * multiplier
+    mean = safe_mean * combined
+    variance = safe_variance * (combined ** 2)
+
+    return max(round(mean, 2), 0.0), max(round(variance, 2), 0.0)

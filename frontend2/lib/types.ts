@@ -10,6 +10,7 @@ export type SKUProfile = {
 	description?: string;
 	features?: Record<string, string>;
 	imageUrl?: string;
+	launchDate?: string | null;
 	demandScale: Sensitivity;
 	priceSensitivity: Sensitivity;
 	festivalSensitivity: Sensitivity;
@@ -24,6 +25,9 @@ export type Listing = {
 	inventory: number;
 	leadTimeDays: number;
 	storageCostPerUnit: number;
+	serviceLevel: number;
+	logisticsCostPerOrder: number;
+	minMarginPct: number;
 };
 
 export type CompetitorRecord = {
@@ -39,12 +43,23 @@ export type CompetitorRecord = {
 
 export type ComputedMetrics = {
 	demand: number;
+	demandMean: number;
+	demandVariance: number;
 	profit: number;
 	revenue: number;
+	marginPct: number;
 	avgCompPrice: number;
 	minCompPrice: number;
 	daysToStockout: number;
 	reorderQty: number;
+	reorderPoint: number;
+	safetyStock: number;
+	serviceLevel: number;
+	stockoutRisk: number;
+	holdingCost: number;
+	logisticsCost: number;
+	stockoutPenalty: number;
+	forecastSource?: string;
 };
 
 export type EngineListingView = {
@@ -123,6 +138,14 @@ export type SimulatorOutput = {
 	revenue: number;
 	profit: number;
 	stockoutDate: string;
+	serviceLevel: number;
+	safetyStock: number;
+	reorderPoint: number;
+	stockoutRisk: number;
+	holdingCost: number;
+	logisticsCost: number;
+	stockoutPenalty: number;
+	forecastSource?: string;
 };
 
 export type PortfolioDataPoint = {
@@ -134,6 +157,27 @@ export type PortfolioDataPoint = {
 	marketplace: Marketplace;
 };
 
+export type GroupedOrderSKU = {
+	skuId: string;
+	skuName: string;
+	listingId: string;
+	marketplace: Marketplace;
+	orderQty: number;
+	orderCost: number;
+	logisticsCost: number;
+};
+
+export type GroupedOrder = {
+	windowStartDays: number;
+	windowEndDays: number;
+	skus: GroupedOrderSKU[];
+	totalOrderQty: number;
+	totalOrderCost: number;
+	separateLogisticsCost: number;
+	groupedLogisticsCost: number;
+	estimatedSavings: number;
+};
+
 export type SKUCreateInput = {
 	id: string;
 	name: string;
@@ -141,6 +185,7 @@ export type SKUCreateInput = {
 	description?: string;
 	features?: Record<string, string>;
 	imageUrl?: string;
+	launchDate?: string | null;
 	demandScale: "low" | "medium" | "high";
 	priceSensitivity: "low" | "medium" | "high";
 	festivalSensitivity: "low" | "medium" | "high";
@@ -152,6 +197,7 @@ export type SKUUpdateInput = Partial<{
 	description: string;
 	features: Record<string, string>;
 	imageUrl: string;
+	launchDate: string | null;
 	demandScale: "low" | "medium" | "high";
 	priceSensitivity: "low" | "medium" | "high";
 	festivalSensitivity: "low" | "medium" | "high";
@@ -211,8 +257,22 @@ export type PricingAnalysisResponse = EngineRecord & {
 		recommendedMax: number;
 		profitCurve: { price: number; profit: number }[];
 		estimatedDemand: number;
+		demandVariance: number;
 		minCompPrice: number;
 		avgCompPrice: number;
 		estimatedProfitChange: number;
+		impliedMarginPct: number;
+		serviceLevel: number;
+		safetyStock: number;
+		reorderPoint: number;
+		stockoutRisk: number;
+		holdingCost: number;
+		logisticsCost: number;
+		stockoutPenalty: number;
+		competitorGap: number;
+		competitorRisk: "High" | "Medium" | "Low";
+		festivalMultiplier: number;
+		lifecycleMultiplier?: number;
+		forecastSource?: string;
 	};
 };

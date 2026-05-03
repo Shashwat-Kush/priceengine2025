@@ -5,11 +5,12 @@ import {
   createListing,
   deleteListing,
   getInventoryData,
+  getInventoryGrouping,
   getListingsBySku,
   getSKUs,
   updateListing,
 } from "@/lib/services";
-import { Listing, ListingCreateInput, EngineRecord } from "@/lib/types";
+import { GroupedOrder, Listing, ListingCreateInput, EngineRecord } from "@/lib/types";
 import { KpiCard } from "@/components/KpiCard";
 import Link from "next/link";
 import { Package, IndianRupee, AlertTriangle } from "lucide-react";
@@ -33,10 +34,14 @@ type InventoryRow = EngineRecord & {
   suggestedOrderQty: number;
   storageCostImpact: number;
   orderCost: number;
+  safetyStock?: number;
+  serviceLevel?: number;
+  stockoutRisk?: number;
 };
 
 export default function InventoryPage() {
   const [rows, setRows] = useState<InventoryRow[]>([]);
+  const [groups, setGroups] = useState<GroupedOrder[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [skuOptions, setSkuOptions] = useState<{ id: string; name: string }[]>([]);
@@ -54,6 +59,9 @@ export default function InventoryPage() {
     inventory: 0,
     leadTimeDays: 7,
     storageCostPerUnit: 5,
+    serviceLevel: 0.95,
+    logisticsCostPerOrder: 150,
+    minMarginPct: 5,
   });
 
   const [toast, setToast] = useState<{
@@ -68,8 +76,12 @@ export default function InventoryPage() {
 
   const loadInventory = async () => {
     setLoading(true);
-    const data = await getInventoryData();
+    const [data, grouped] = await Promise.all([
+      getInventoryData(),
+      getInventoryGrouping(),
+    ]);
     setRows(data as InventoryRow[]);
+    setGroups(grouped as GroupedOrder[]);
     setLoading(false);
   };
 
@@ -113,6 +125,9 @@ export default function InventoryPage() {
       inventory: 0,
       leadTimeDays: 7,
       storageCostPerUnit: 5,
+      serviceLevel: 0.95,
+      logisticsCostPerOrder: 150,
+      minMarginPct: 5,
     });
   };
 
@@ -131,6 +146,9 @@ export default function InventoryPage() {
           inventory: listingDraft.inventory,
           leadTimeDays: listingDraft.leadTimeDays,
           storageCostPerUnit: listingDraft.storageCostPerUnit,
+          serviceLevel: listingDraft.serviceLevel,
+          logisticsCostPerOrder: listingDraft.logisticsCostPerOrder,
+          minMarginPct: listingDraft.minMarginPct,
         });
         showToast("success", "Listing updated.");
       }
@@ -153,6 +171,9 @@ export default function InventoryPage() {
       inventory: listing.inventory,
       leadTimeDays: listing.leadTimeDays,
       storageCostPerUnit: listing.storageCostPerUnit,
+      serviceLevel: listing.serviceLevel ?? 0.95,
+      logisticsCostPerOrder: listing.logisticsCostPerOrder ?? 150,
+      minMarginPct: listing.minMarginPct ?? 5,
     });
   };
 
@@ -249,6 +270,9 @@ export default function InventoryPage() {
                     <th className="text-right px-3 py-3 text-xs font-semibold text-slate-500 uppercase">Computed Demand</th>
                     <th className="text-right px-3 py-3 text-xs font-semibold text-slate-500 uppercase">Days to Stockout</th>
                     <th className="text-right px-3 py-3 text-xs font-semibold text-slate-500 uppercase">Lead Time</th>
+                    <th className="text-right px-3 py-3 text-xs font-semibold text-slate-500 uppercase">Service Level</th>
+                    <th className="text-right px-3 py-3 text-xs font-semibold text-slate-500 uppercase">Reorder Point</th>
+                    <th className="text-right px-3 py-3 text-xs font-semibold text-slate-500 uppercase">Safety Stock</th>
                     <th className="text-right px-3 py-3 text-xs font-semibold text-slate-500 uppercase">Reorder Qty</th>
                     <th className="text-right px-3 py-3 text-xs font-semibold text-slate-500 uppercase">Order Cost</th>
                     <th className="text-left px-3 py-3 text-xs font-semibold text-slate-500 uppercase">Status</th>
@@ -271,6 +295,9 @@ export default function InventoryPage() {
                         <td className="px-3 py-3.5 text-right font-mono text-blue-700">{row.computed.demand.toFixed(2)}</td>
                         <td className="px-3 py-3.5 text-right font-mono">{row.computed.daysToStockout >= 999 ? "∞" : row.computed.daysToStockout}</td>
                         <td className="px-3 py-3.5 text-right font-mono text-slate-500">{listing.leadTimeDays}d</td>
+                        <td className="px-3 py-3.5 text-right font-mono text-slate-600">{(listing.serviceLevel ?? 0.95).toFixed(2)}</td>
+                        <td className="px-3 py-3.5 text-right font-mono text-indigo-700">{row.reorderPoint.toFixed(1)}</td>
+                        <td className="px-3 py-3.5 text-right font-mono text-slate-600">{row.safetyStock?.toFixed(1) ?? "-"}</td>
                         <td className="px-3 py-3.5 text-right font-mono font-semibold text-indigo-700">{row.suggestedOrderQty}</td>
                         <td className="px-3 py-3.5 text-right font-mono text-slate-600">{row.orderCost > 0 ? formatINR(row.orderCost) : "-"}</td>
                         <td className="px-3 py-3.5 text-xs font-medium">{status}</td>
@@ -283,10 +310,57 @@ export default function InventoryPage() {
           </div>
 
           <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-100">
+              <h2 className="font-semibold text-slate-800">Grouped Reorders</h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Suggested shipment windows to consolidate logistics cost.
+              </p>
+            </div>
+            {groups.length === 0 ? (
+              <div className="px-5 py-6 text-sm text-slate-500">No grouped reorders yet.</div>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {groups.map((group) => (
+                  <div key={group.windowStartDays} className="px-5 py-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800">
+                          Ship window: {group.windowStartDays}–{group.windowEndDays} days
+                        </p>
+                        <p className="text-xs text-slate-500 mt-1">
+                          {group.skus.length} SKUs · {group.totalOrderQty} units · {formatINR(group.totalOrderCost)}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-slate-500">Estimated Savings</p>
+                        <p className="text-sm font-semibold text-emerald-600">
+                          {formatINR(group.estimatedSavings)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                      {group.skus.map((item) => (
+                        <div key={item.listingId} className="border border-slate-100 rounded-lg px-3 py-2">
+                          <p className="font-medium text-slate-700">
+                            {item.skuName} · {item.marketplace}
+                          </p>
+                          <p className="text-slate-500">
+                            Qty {item.orderQty} · {formatINR(item.orderCost)} · Logistics {formatINR(item.logisticsCost)}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
             <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3">
               <div>
                 <h2 className="font-semibold text-slate-800">Listing Manager</h2>
-                <p className="text-xs text-slate-500 mt-0.5">Edit business decisions only: price, cost, inventory, lead time.</p>
+                <p className="text-xs text-slate-500 mt-0.5">Edit pricing, service level, and logistics assumptions per listing.</p>
               </div>
               <select
                 value={selectedSkuId}
@@ -319,17 +393,20 @@ export default function InventoryPage() {
                   </select>
                 </label>
                 {[
-                  ["Price", "price"],
-                  ["Cost", "cost"],
-                  ["Inventory", "inventory"],
-                  ["Lead Time", "leadTimeDays"],
-                  ["Storage Cost", "storageCostPerUnit"],
-                ].map(([label, key]) => (
+                  ["Price", "price", "1"],
+                  ["Cost", "cost", "1"],
+                  ["Inventory", "inventory", "1"],
+                  ["Lead Time", "leadTimeDays", "1"],
+                  ["Storage Cost", "storageCostPerUnit", "0.1"],
+                  ["Service Level", "serviceLevel", "0.01"],
+                  ["Logistics Cost", "logisticsCostPerOrder", "1"],
+                  ["Min Margin %", "minMarginPct", "0.1"],
+                ].map(([label, key, step]) => (
                   <label key={key} className="text-xs text-slate-600">
                     {label}
                     <input
                       type="number"
-                      step={key === "storageCostPerUnit" ? "0.1" : "1"}
+                      step={step}
                       value={listingDraft[key as keyof ListingCreateInput] as number}
                       onChange={(e) =>
                         setListingDraft((prev) => ({
@@ -371,6 +448,9 @@ export default function InventoryPage() {
                       <th className="text-right px-3 py-3 text-xs font-semibold text-slate-500 uppercase">Cost</th>
                       <th className="text-right px-3 py-3 text-xs font-semibold text-slate-500 uppercase">Inventory</th>
                       <th className="text-right px-3 py-3 text-xs font-semibold text-slate-500 uppercase">Lead Time</th>
+                      <th className="text-right px-3 py-3 text-xs font-semibold text-slate-500 uppercase">Service Level</th>
+                      <th className="text-right px-3 py-3 text-xs font-semibold text-slate-500 uppercase">Min Margin</th>
+                      <th className="text-right px-3 py-3 text-xs font-semibold text-slate-500 uppercase">Logistics</th>
                       <th className="px-3 py-3"></th>
                     </tr>
                   </thead>
@@ -382,6 +462,9 @@ export default function InventoryPage() {
                         <td className="px-3 py-3.5 text-right font-mono text-slate-500">₹{listing.cost}</td>
                         <td className="px-3 py-3.5 text-right font-mono">{listing.inventory}</td>
                         <td className="px-3 py-3.5 text-right font-mono text-slate-500">{listing.leadTimeDays}d</td>
+                        <td className="px-3 py-3.5 text-right font-mono text-slate-600">{(listing.serviceLevel ?? 0.95).toFixed(2)}</td>
+                        <td className="px-3 py-3.5 text-right font-mono text-slate-600">{(listing.minMarginPct ?? 5).toFixed(1)}%</td>
+                        <td className="px-3 py-3.5 text-right font-mono text-slate-600">₹{listing.logisticsCostPerOrder ?? 150}</td>
                         <td className="px-3 py-3.5 text-right">
                           <div className="flex items-center justify-end gap-2">
                             <button onClick={() => editListing(listing)} className="text-xs text-blue-600 hover:underline">

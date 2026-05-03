@@ -18,6 +18,7 @@ const defaultForm: SKUCreateInput = {
 	description: "",
 	features: {},
 	imageUrl: "",
+	launchDate: "",
 	demandScale: "medium",
 	priceSensitivity: "medium",
 	festivalSensitivity: "medium",
@@ -55,6 +56,7 @@ function mapSkuToForm(sku: SKUProfile): SKUCreateInput {
 		description: sku.description ?? "",
 		features: sku.features ?? {},
 		imageUrl: sku.imageUrl ?? "",
+		launchDate: sku.launchDate ?? "",
 		demandScale: sku.demandScale.toLowerCase() as "low" | "medium" | "high",
 		priceSensitivity: sku.priceSensitivity.toLowerCase() as
 			| "low"
@@ -490,6 +492,20 @@ export default function SKUsPage() {
 										setForm((prev) => ({
 											...prev,
 											category: e.target.value,
+										}))
+									}
+									className="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+								/>
+							</label>
+							<label className="text-sm text-slate-600">
+								Launch Date
+								<input
+									type="date"
+									value={form.launchDate ?? ""}
+									onChange={(e) =>
+										setForm((prev) => ({
+											...prev,
+											launchDate: e.target.value,
 										}))
 									}
 									className="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"

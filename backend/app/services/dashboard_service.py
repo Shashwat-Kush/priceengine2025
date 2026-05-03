@@ -42,7 +42,8 @@ def build_dashboard_payload(skus: list[dict]) -> dict:
         listing_id = str(sku.get("listing_id", ""))
 
         monthly_revenue = current_price * demand * 30
-        monthly_profit = (current_price - cost) * demand * 30
+        daily_profit = float(sku.get("profit", 0.0))
+        monthly_profit = daily_profit * 30
 
         total_revenue += monthly_revenue
         total_profit += monthly_profit

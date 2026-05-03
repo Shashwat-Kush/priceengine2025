@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -51,6 +52,7 @@ class SKUCreate(BaseModel):
     description: Optional[str] = Field(default=None, max_length=1200)
     features: Dict[str, str] = Field(default_factory=dict)
     image_url: Optional[str] = Field(default=None, max_length=2000)
+    launch_date: Optional[date] = None
 
     @field_validator("id", "name", "category", mode="before")
     @classmethod
@@ -92,6 +94,7 @@ class SKUUpdate(BaseModel):
     description: Optional[str] = Field(default=None, max_length=1200)
     features: Optional[Dict[str, str]] = None
     image_url: Optional[str] = Field(default=None, max_length=2000)
+    launch_date: Optional[date] = None
 
     @field_validator("name", "category", mode="before")
     @classmethod
@@ -133,6 +136,7 @@ class PriceSimulationRequest(BaseModel):
     price: float = Field(gt=0)
     festivalBoost: bool = Field(default=False, alias="festivalBoost")
     competitorPrice: Optional[float] = Field(default=None, alias="competitorPrice")
+    serviceLevel: Optional[float] = Field(default=None, alias="serviceLevel", ge=0.5, le=0.995)
 
 
 def sku_doc_from_create(payload: SKUCreate) -> Dict[str, Any]:
@@ -148,6 +152,7 @@ def sku_doc_from_create(payload: SKUCreate) -> Dict[str, Any]:
         "description": data.get("description"),
         "features": normalize_features(data.get("features")),
         "image_url": data.get("image_url"),
+        "launch_date": data.get("launch_date").isoformat() if data.get("launch_date") else None,
         "created_at": now,
         "updated_at": now,
     }
@@ -163,6 +168,8 @@ def sku_doc_updates(payload: SKUUpdate) -> Dict[str, Any]:
         updates["festival_sensitivity"] = normalize_sensitivity(str(updates["festival_sensitivity"]))
     if "features" in updates:
         updates["features"] = normalize_features(updates["features"])
+    if "launch_date" in updates and updates["launch_date"] is not None:
+        updates["launch_date"] = updates["launch_date"].isoformat()
     if updates:
         updates["updated_at"] = utc_now()
     return updates
@@ -182,4 +189,5 @@ def sku_to_frontend(doc: Dict[str, Any]) -> Dict[str, Any]:
         "demandScale": to_title_sensitivity(demand_scale),
         "priceSensitivity": to_title_sensitivity(str(doc.get("price_sensitivity", "medium"))),
         "festivalSensitivity": to_title_sensitivity(festival),
+        "launchDate": str(doc.get("launch_date")) if doc.get("launch_date") else None,
     }

@@ -10,6 +10,7 @@ import {
 	FestivalCreateInput,
 	FestivalEvent,
 	FestivalUpdateInput,
+	GroupedOrder,
 	Listing,
 	ListingCreateInput,
 	ListingUpdateInput,
@@ -224,6 +225,7 @@ export async function createSKU(input: SKUCreateInput) {
 			description: input.description,
 			features: input.features,
 			image_url: input.imageUrl,
+			launch_date: input.launchDate || null,
 			demand_scale: input.demandScale,
 			price_sensitivity: input.priceSensitivity,
 			festival_sensitivity: input.festivalSensitivity,
@@ -240,6 +242,7 @@ export async function updateSKU(skuId: string, input: SKUUpdateInput) {
 			description: input.description,
 			features: input.features,
 			image_url: input.imageUrl,
+			launch_date: input.launchDate || null,
 			demand_scale: input.demandScale,
 			price_sensitivity: input.priceSensitivity,
 			festival_sensitivity: input.festivalSensitivity,
@@ -278,6 +281,9 @@ export async function createListing(input: ListingCreateInput) {
 			inventory: input.inventory,
 			lead_time_days: input.leadTimeDays,
 			storage_cost_per_unit: input.storageCostPerUnit,
+			service_level: input.serviceLevel,
+			logistics_cost_per_order: input.logisticsCostPerOrder,
+			min_margin_pct: input.minMarginPct,
 		}),
 	});
 }
@@ -296,6 +302,9 @@ export async function updateListing(
 			inventory: input.inventory,
 			lead_time_days: input.leadTimeDays,
 			storage_cost_per_unit: input.storageCostPerUnit,
+			service_level: input.serviceLevel,
+			logistics_cost_per_order: input.logisticsCostPerOrder,
+			min_margin_pct: input.minMarginPct,
 		}),
 	});
 }
@@ -410,12 +419,14 @@ export async function simulatePriceChange(
 	skuId: string,
 	price: number,
 	festivalBoost: boolean,
+	serviceLevel?: number,
 ): Promise<SimulatorOutput> {
 	return await apiRequest<SimulatorOutput>(`/pricing/simulate/${skuId}`, {
 		method: "POST",
 		body: JSON.stringify({
 			price,
 			festivalBoost,
+			serviceLevel,
 		}),
 	});
 }
@@ -486,6 +497,14 @@ export async function getInventoryData() {
 				}
 			>
 		>("/inventory");
+	} catch {
+		return [];
+	}
+}
+
+export async function getInventoryGrouping() {
+	try {
+		return await apiRequest<GroupedOrder[]>("/inventory/grouping");
 	} catch {
 		return [];
 	}

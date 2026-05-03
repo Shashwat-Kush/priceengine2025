@@ -10,9 +10,9 @@ from app.schemas.crud_schema import (
     festival_doc_updates,
     festival_to_frontend,
 )
-from app.schemas.sku_schema import map_base_demand_to_scale, normalize_demand_scale
 from app.services.catalog_service import compute_listing_metrics, list_sku_bundles
-from app.services.demand_service import estimate_demand
+from app.services.demand_service import adjust_demand_from_base
+from app.services.forecast_service import forecast_base_demand
 from app.utils.helpers import days_until
 
 router = APIRouter(tags=["Festival Engine"])
@@ -115,16 +115,18 @@ async def get_festival_plan(
                 min_comp_price = float(current_metrics["min_comp_price"])
                 avg_comp_price = float(current_metrics["avg_comp_price"])
 
-                demand_scale = normalize_demand_scale(
-                    str(sku_doc.get("demand_scale") or map_base_demand_to_scale(sku_doc.get("base_demand")))
-                )
-                sensitivity = str(sku_doc.get("price_sensitivity", "medium"))
-
                 suggested_price = round(current_price * (0.95 if float(fest["boost"]) >= 1.5 else 0.97), 2)
-                demand_festival = estimate_demand(
+                forecast = forecast_base_demand(
+                    sku=sku_doc,
+                    listing=listing,
                     price=suggested_price,
-                    demand_scale=demand_scale,
-                    price_sensitivity=sensitivity,
+                    competitor_price=min_comp_price,
+                )
+                demand_festival, _ = adjust_demand_from_base(
+                    base_mean=float(forecast["mean"]),
+                    base_variance=float(forecast["variance"]),
+                    price=suggested_price,
+                    price_sensitivity=str(sku_doc.get("price_sensitivity", "medium")),
                     avg_comp_price=avg_comp_price,
                     min_comp_price=min_comp_price,
                     festival_multiplier=float(fest["boost"]),

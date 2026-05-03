@@ -18,6 +18,9 @@ class ListingCreate(BaseModel):
     inventory: int = Field(ge=0)
     lead_time_days: int = Field(ge=0, le=180)
     storage_cost_per_unit: float = Field(ge=0)
+    service_level: float = Field(default=0.95, ge=0.5, le=0.995)
+    logistics_cost_per_order: float = Field(default=150.0, ge=0)
+    min_margin_pct: float = Field(default=5.0, ge=0, le=90)
 
     @field_validator("id", "sku_id", mode="before")
     @classmethod
@@ -48,6 +51,9 @@ class ListingUpdate(BaseModel):
     inventory: Optional[int] = Field(default=None, ge=0)
     lead_time_days: Optional[int] = Field(default=None, ge=0, le=180)
     storage_cost_per_unit: Optional[float] = Field(default=None, ge=0)
+    service_level: Optional[float] = Field(default=None, ge=0.5, le=0.995)
+    logistics_cost_per_order: Optional[float] = Field(default=None, ge=0)
+    min_margin_pct: Optional[float] = Field(default=None, ge=0, le=90)
 
     @field_validator("sku_id", "marketplace", mode="before")
     @classmethod
@@ -183,6 +189,9 @@ def listing_doc_from_create(payload: ListingCreate, org_id: str) -> Dict[str, An
         "inventory": int(data["inventory"]),
         "lead_time_days": int(data["lead_time_days"]),
         "storage_cost_per_unit": float(data["storage_cost_per_unit"]),
+        "service_level": float(data.get("service_level", 0.95)),
+        "logistics_cost_per_order": float(data.get("logistics_cost_per_order", 150.0)),
+        "min_margin_pct": float(data.get("min_margin_pct", 5.0)),
         "created_at": now,
         "updated_at": now,
     }

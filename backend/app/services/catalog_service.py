@@ -1,12 +1,12 @@
 from typing import Any, Dict, List, Optional
 
-from math import ceil
-
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from app.schemas.sku_schema import map_base_demand_to_scale, normalize_demand_scale, sku_to_frontend
-from app.services.demand_service import estimate_demand
-from app.utils.helpers import normalize_sensitivity
+from app.schemas.sku_schema import map_base_demand_to_scale, sku_to_frontend
+from app.services.demand_service import adjust_demand_from_base
+from app.services.forecast_service import forecast_base_demand
+from app.services.inventory_service import inventory_metrics
+from app.utils.helpers import compute_margin_pct, normalize_sensitivity
 
 
 def _marketplace_priority(marketplace: str) -> int:
@@ -50,6 +50,9 @@ def listing_to_response(listing: Dict[str, Any]) -> Dict[str, Any]:
         "inventory": int(listing.get("inventory", 0)),
         "leadTimeDays": int(listing.get("lead_time_days", 0)),
         "storageCostPerUnit": float(listing.get("storage_cost_per_unit", 0.0)),
+        "serviceLevel": float(listing.get("service_level", 0.95)),
+        "logisticsCostPerOrder": float(listing.get("logistics_cost_per_order", 150.0)),
+        "minMarginPct": float(listing.get("min_margin_pct", 5.0)),
     }
 
 
@@ -83,11 +86,11 @@ def compute_listing_metrics(
     cost = float(listing.get("cost", 0.0))
     inventory = int(listing.get("inventory", 0))
     lead_time_days = int(listing.get("lead_time_days", 0))
+    service_level = float(listing.get("service_level", 0.95))
+    logistics_cost_per_order = float(listing.get("logistics_cost_per_order", 150.0))
 
     min_comp_price, avg_comp_price = _aggregate_competitor_prices(competitors, price)
 
-    demand_scale = str(sku.get("demand_scale") or map_base_demand_to_scale(sku.get("base_demand")))
-    demand_scale = normalize_demand_scale(demand_scale)
     price_sensitivity = normalize_sensitivity(str(sku.get("price_sensitivity", "medium")))
     festival_sensitivity = normalize_sensitivity(
         str(sku.get("festival_sensitivity") or sku.get("festival_boost_potential", "medium"))
@@ -99,9 +102,19 @@ def compute_listing_metrics(
         else _festival_multiplier_from_sensitivity(festival_sensitivity)
     )
 
-    demand = estimate_demand(
+    forecast = forecast_base_demand(
+        sku=sku,
+        listing=listing,
         price=price,
-        demand_scale=demand_scale,
+        competitor_price=min_comp_price,
+    )
+    base_mean = float(forecast["mean"])
+    base_variance = float(forecast["variance"])
+
+    demand, demand_variance = adjust_demand_from_base(
+        base_mean=base_mean,
+        base_variance=base_variance,
+        price=price,
         price_sensitivity=price_sensitivity,
         avg_comp_price=avg_comp_price,
         min_comp_price=min_comp_price,
@@ -109,20 +122,44 @@ def compute_listing_metrics(
     )
 
     revenue = round(price * demand, 2)
-    profit = round((price - cost) * demand, 2)
-    days_to_stockout = 999 if demand <= 0 else int(inventory / demand)
+    gross_profit = (price - cost) * demand
 
-    safety_buffer = max(2.0, demand * 2)
-    reorder_qty = max(0, int(ceil((demand * lead_time_days) + safety_buffer - inventory)))
+    metrics = inventory_metrics(
+        {
+            "inventory": inventory,
+            "demand_mean": demand,
+            "demand_variance": demand_variance,
+            "lead_time_days": lead_time_days,
+            "storage_cost_per_unit": float(listing.get("storage_cost_per_unit", 0.0)),
+            "cost": cost,
+            "service_level": service_level,
+        }
+    )
+
+    holding_cost = float(metrics["safetyStock"]) * float(listing.get("storage_cost_per_unit", 0.0))
+    logistics_cost = logistics_cost_per_order if demand > 0 else 0.0
+    stockout_penalty = gross_profit * float(metrics["stockoutRisk"])
+    net_profit = gross_profit - holding_cost - logistics_cost - stockout_penalty
 
     return {
         "demand": round(demand, 2),
-        "revenue": revenue,
-        "profit": profit,
+        "demand_mean": round(base_mean, 2),
+        "demand_variance": round(demand_variance, 2),
+        "revenue": round(revenue, 2),
+        "profit": round(net_profit, 2),
+        "margin_pct": compute_margin_pct(price, cost),
         "avg_comp_price": round(avg_comp_price, 2),
         "min_comp_price": round(min_comp_price, 2),
-        "days_to_stockout": days_to_stockout,
-        "reorder_qty": reorder_qty,
+        "days_to_stockout": metrics["daysUntilStockout"],
+        "reorder_qty": metrics["suggestedOrderQty"],
+        "reorder_point": metrics["reorderPoint"],
+        "safety_stock": metrics["safetyStock"],
+        "service_level": metrics["serviceLevel"],
+        "stockout_risk": metrics["stockoutRisk"],
+        "holding_cost": round(holding_cost, 2),
+        "logistics_cost": round(logistics_cost, 2),
+        "stockout_penalty": round(stockout_penalty, 2),
+        "forecast_source": forecast["source"],
     }
 
 
@@ -258,12 +295,23 @@ def to_engine_record(bundle: Dict[str, Any]) -> Dict[str, Any]:
     competitors = bundle.get("primary_competitors", [])
     computed = compute_listing_metrics(sku, listing, competitors) if listing else {
         "demand": 0.0,
+        "demand_mean": 0.0,
+        "demand_variance": 0.0,
         "revenue": 0.0,
         "profit": 0.0,
+        "margin_pct": 0.0,
         "avg_comp_price": 0.0,
         "min_comp_price": 0.0,
         "days_to_stockout": 999,
         "reorder_qty": 0,
+        "reorder_point": 0.0,
+        "safety_stock": 0.0,
+        "service_level": float(listing.get("service_level", 0.95)),
+        "stockout_risk": 0.0,
+        "holding_cost": 0.0,
+        "logistics_cost": 0.0,
+        "stockout_penalty": 0.0,
+        "forecast_source": "heuristic",
     }
 
     return {
@@ -282,12 +330,24 @@ def to_engine_record(bundle: Dict[str, Any]) -> Dict[str, Any]:
         "inventory": int(listing.get("inventory", 0)),
         "lead_time_days": int(listing.get("lead_time_days", 0)),
         "storage_cost_per_unit": float(listing.get("storage_cost_per_unit", 0.0)),
+        "service_level": float(listing.get("service_level", 0.95)),
+        "logistics_cost_per_order": float(listing.get("logistics_cost_per_order", 150.0)),
+        "min_margin_pct": float(listing.get("min_margin_pct", 5.0)),
         "demand": computed["demand"],
         "revenue": computed["revenue"],
         "profit": computed["profit"],
+        "margin_pct": computed["margin_pct"],
         "avg_comp_price": computed["avg_comp_price"],
         "min_comp_price": computed["min_comp_price"],
         "days_to_stockout": computed["days_to_stockout"],
+        "reorder_point": computed["reorder_point"],
+        "safety_stock": computed["safety_stock"],
+        "service_level": computed["service_level"],
+        "stockout_risk": computed["stockout_risk"],
+        "holding_cost": computed["holding_cost"],
+        "logistics_cost": computed["logistics_cost"],
+        "stockout_penalty": computed["stockout_penalty"],
+        "forecast_source": computed["forecast_source"],
     }
 
 
@@ -304,12 +364,23 @@ def build_standard_response(
         if primary_listing
         else {
             "demand": 0.0,
+            "demand_mean": 0.0,
+            "demand_variance": 0.0,
             "revenue": 0.0,
             "profit": 0.0,
+            "margin_pct": 0.0,
             "avg_comp_price": 0.0,
             "min_comp_price": 0.0,
             "days_to_stockout": 999,
             "reorder_qty": 0,
+            "reorder_point": 0.0,
+            "safety_stock": 0.0,
+            "service_level": float(primary_listing.get("service_level", 0.95)),
+            "stockout_risk": 0.0,
+            "holding_cost": 0.0,
+            "logistics_cost": 0.0,
+            "stockout_penalty": 0.0,
+            "forecast_source": "heuristic",
         }
     )
 
@@ -319,12 +390,23 @@ def build_standard_response(
         "competitors": [competitor_to_response(row) for row in primary_competitors],
         "computed": {
             "demand": computed["demand"],
+            "demandMean": computed["demand_mean"],
+            "demandVariance": computed["demand_variance"],
             "profit": computed["profit"],
             "revenue": computed["revenue"],
-            "avg_comp_price": computed["avg_comp_price"],
-            "min_comp_price": computed["min_comp_price"],
-            "days_to_stockout": computed["days_to_stockout"],
-            "reorder_qty": computed["reorder_qty"],
+            "marginPct": computed["margin_pct"],
+            "avgCompPrice": computed["avg_comp_price"],
+            "minCompPrice": computed["min_comp_price"],
+            "daysToStockout": computed["days_to_stockout"],
+            "reorderQty": computed["reorder_qty"],
+            "reorderPoint": computed["reorder_point"],
+            "safetyStock": computed["safety_stock"],
+            "serviceLevel": computed["service_level"],
+            "stockoutRisk": computed["stockout_risk"],
+            "holdingCost": computed["holding_cost"],
+            "logisticsCost": computed["logistics_cost"],
+            "stockoutPenalty": computed["stockout_penalty"],
+            "forecastSource": computed["forecast_source"],
         },
     }
 
@@ -342,12 +424,23 @@ def build_standard_response(
                     "competitors": [competitor_to_response(row) for row in listing_competitors],
                     "computed": {
                         "demand": listing_computed["demand"],
+                        "demandMean": listing_computed["demand_mean"],
+                        "demandVariance": listing_computed["demand_variance"],
                         "profit": listing_computed["profit"],
                         "revenue": listing_computed["revenue"],
-                        "avg_comp_price": listing_computed["avg_comp_price"],
-                        "min_comp_price": listing_computed["min_comp_price"],
-                        "days_to_stockout": listing_computed["days_to_stockout"],
-                        "reorder_qty": listing_computed["reorder_qty"],
+                        "marginPct": listing_computed["margin_pct"],
+                        "avgCompPrice": listing_computed["avg_comp_price"],
+                        "minCompPrice": listing_computed["min_comp_price"],
+                        "daysToStockout": listing_computed["days_to_stockout"],
+                        "reorderQty": listing_computed["reorder_qty"],
+                        "reorderPoint": listing_computed["reorder_point"],
+                        "safetyStock": listing_computed["safety_stock"],
+                        "serviceLevel": listing_computed["service_level"],
+                        "stockoutRisk": listing_computed["stockout_risk"],
+                        "holdingCost": listing_computed["holding_cost"],
+                        "logisticsCost": listing_computed["logistics_cost"],
+                        "stockoutPenalty": listing_computed["stockout_penalty"],
+                        "forecastSource": listing_computed["forecast_source"],
                     },
                 }
             )

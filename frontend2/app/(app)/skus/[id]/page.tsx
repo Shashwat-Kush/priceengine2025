@@ -48,6 +48,7 @@ export default function SKUDetailPage({
 	const [activeListingId, setActiveListingId] = useState("");
 	const [simPrice, setSimPrice] = useState(0);
 	const [simFestivalBoost, setSimFestivalBoost] = useState(false);
+	const [simServiceLevel, setSimServiceLevel] = useState(0.95);
 	const [simLoading, setSimLoading] = useState(false);
 	const [simResult, setSimResult] = useState<SimulatorOutput | null>(null);
 
@@ -70,6 +71,7 @@ export default function SKUDetailPage({
 			if (firstListing) {
 				setActiveListingId(firstListing.id);
 				setSimPrice(firstListing.price);
+				setSimServiceLevel(firstListing.serviceLevel ?? 0.95);
 			}
 
 			setLoading(false);
@@ -106,6 +108,7 @@ export default function SKUDetailPage({
 			skuId,
 			simPrice,
 			simFestivalBoost,
+			simServiceLevel,
 		);
 		setSimResult(output);
 		setSimLoading(false);
@@ -312,6 +315,14 @@ export default function SKUDetailPage({
 							</div>
 							<div className="bg-slate-50 rounded-lg border border-slate-100 p-3">
 								<p className="text-xs text-slate-500">
+									Demand Variance
+								</p>
+								<p className="font-semibold text-slate-800">
+									{optimization.demandVariance.toFixed(2)}
+								</p>
+							</div>
+							<div className="bg-slate-50 rounded-lg border border-slate-100 p-3">
+								<p className="text-xs text-slate-500">
 									Comp. Min / Avg
 								</p>
 								<p className="font-semibold text-slate-800">
@@ -326,6 +337,62 @@ export default function SKUDetailPage({
 								<p className="font-semibold text-slate-800">
 									₹{optimization.recommendedMin} - ₹
 									{optimization.recommendedMax}
+								</p>
+							</div>
+							<div className="bg-slate-50 rounded-lg border border-slate-100 p-3">
+								<p className="text-xs text-slate-500">
+									Implied Margin
+								</p>
+								<p className="font-semibold text-slate-800">
+									{optimization.impliedMarginPct.toFixed(1)}%
+								</p>
+							</div>
+							<div className="bg-slate-50 rounded-lg border border-slate-100 p-3">
+								<p className="text-xs text-slate-500">
+									Service Level
+								</p>
+								<p className="font-semibold text-slate-800">
+									{optimization.serviceLevel.toFixed(2)}
+								</p>
+							</div>
+							<div className="bg-slate-50 rounded-lg border border-slate-100 p-3">
+								<p className="text-xs text-slate-500">
+									Reorder Point
+								</p>
+								<p className="font-semibold text-slate-800">
+									{optimization.reorderPoint.toFixed(1)}
+								</p>
+							</div>
+							<div className="bg-slate-50 rounded-lg border border-slate-100 p-3">
+								<p className="text-xs text-slate-500">
+									Safety Stock
+								</p>
+								<p className="font-semibold text-slate-800">
+									{optimization.safetyStock.toFixed(1)}
+								</p>
+							</div>
+							<div className="bg-slate-50 rounded-lg border border-slate-100 p-3">
+								<p className="text-xs text-slate-500">
+									Competitor Risk
+								</p>
+								<p className="font-semibold text-slate-800">
+									{optimization.competitorRisk}
+								</p>
+							</div>
+							<div className="bg-slate-50 rounded-lg border border-slate-100 p-3">
+								<p className="text-xs text-slate-500">
+									Forecast Source
+								</p>
+								<p className="font-semibold text-slate-800">
+									{optimization.forecastSource ?? "heuristic"}
+								</p>
+							</div>
+							<div className="bg-slate-50 rounded-lg border border-slate-100 p-3">
+								<p className="text-xs text-slate-500">
+									Lifecycle Multiplier
+								</p>
+								<p className="font-semibold text-slate-800">
+									{(optimization.lifecycleMultiplier ?? 1).toFixed(2)}
 								</p>
 							</div>
 							<div className="bg-emerald-50 rounded-lg border border-emerald-100 p-3">
@@ -359,7 +426,10 @@ export default function SKUDetailPage({
 							const row = listingRows.find(
 								(it) => it.listing.id === e.target.value,
 							);
-							if (row) setSimPrice(row.listing.price);
+							if (row) {
+								setSimPrice(row.listing.price);
+								setSimServiceLevel(row.listing.serviceLevel ?? 0.95);
+							}
 						}}
 						className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"
 					>
@@ -398,7 +468,13 @@ export default function SKUDetailPage({
 											Demand
 										</th>
 										<th className="text-right px-3 py-3 text-xs font-semibold text-slate-500 uppercase">
+											Service Level
+										</th>
+										<th className="text-right px-3 py-3 text-xs font-semibold text-slate-500 uppercase">
 											Profit/day
+										</th>
+										<th className="text-right px-3 py-3 text-xs font-semibold text-slate-500 uppercase">
+											Reorder Point
 										</th>
 										<th className="text-right px-3 py-3 text-xs font-semibold text-slate-500 uppercase">
 											Reorder Qty
@@ -430,8 +506,14 @@ export default function SKUDetailPage({
 											<td className="px-3 py-3.5 text-right font-mono text-blue-700">
 												{row.computed.demand.toFixed(2)}
 											</td>
+											<td className="px-3 py-3.5 text-right font-mono text-slate-600">
+												{row.computed.serviceLevel.toFixed(2)}
+											</td>
 											<td className="px-3 py-3.5 text-right font-mono text-emerald-700">
 												{formatINR(row.computed.profit)}
+											</td>
+											<td className="px-3 py-3.5 text-right font-mono">
+												{row.computed.reorderPoint.toFixed(1)}
 											</td>
 											<td className="px-3 py-3.5 text-right font-mono">
 												{row.computed.reorderQty}
@@ -489,6 +571,36 @@ export default function SKUDetailPage({
 												.daysToStockout ?? 999}
 										</strong>
 									</p>
+									<p>
+										Service level:{" "}
+										<strong>
+											{activeListingRow?.computed
+												.serviceLevel?.toFixed(2) ?? "0.95"}
+										</strong>
+									</p>
+									<p>
+										Safety stock:{" "}
+										<strong>
+											{activeListingRow?.computed
+												.safetyStock?.toFixed(1) ?? "0.0"}
+										</strong>
+									</p>
+									<p>
+										Reorder point:{" "}
+										<strong>
+											{activeListingRow?.computed
+												.reorderPoint?.toFixed(1) ?? "0.0"}
+										</strong>
+									</p>
+									<p>
+										Stockout risk:{" "}
+										<strong>
+											{(
+												(activeListingRow?.computed.stockoutRisk ??
+													0) * 100
+											).toFixed(1)}%
+										</strong>
+									</p>
 								</div>
 							</div>
 							<div className="border border-slate-100 rounded-xl p-4">
@@ -530,8 +642,8 @@ export default function SKUDetailPage({
 					Scenario Simulator
 				</h3>
 				<p className="text-xs text-slate-500 mb-4">
-					Simulate price and festival effect. Competitor influence
-					remains system-derived.
+					Simulate price, service level, and festival effect. Competitor
+					influence remains system-derived.
 				</p>
 				<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 					<div className="lg:col-span-2 space-y-3">
@@ -584,6 +696,29 @@ export default function SKUDetailPage({
 								/>
 							</button>
 						</div>
+						<div>
+							<div className="flex justify-between text-xs mb-1.5">
+								<label className="text-slate-600 font-medium">
+									Service Level
+								</label>
+								<span className="font-bold text-blue-600">
+									{(simServiceLevel * 100).toFixed(1)}%
+								</span>
+							</div>
+							<input
+								type="range"
+								min={0.8}
+								max={0.99}
+								step={0.01}
+								value={simServiceLevel}
+								onChange={(e) =>
+									setSimServiceLevel(
+										Number(e.target.value),
+									)
+								}
+								className="w-full h-2 rounded-lg appearance-none bg-slate-200 accent-blue-500"
+							/>
+						</div>
 						<button
 							onClick={runSimulation}
 							disabled={simLoading}
@@ -593,7 +728,7 @@ export default function SKUDetailPage({
 						</button>
 					</div>
 
-					<div className="space-y-2">
+					<div className="grid grid-cols-2 gap-2">
 						<div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2.5">
 							<p className="text-xs text-blue-600">
 								Expected Units (30d)
@@ -626,6 +761,42 @@ export default function SKUDetailPage({
 								{simResult?.stockoutDate ?? "-"}
 							</p>
 						</div>
+						<div className="bg-slate-50 border border-slate-100 rounded-lg px-3 py-2.5">
+							<p className="text-xs text-slate-500">Service Level</p>
+							<p className="font-bold text-slate-700">
+								{(simResult?.serviceLevel ?? simServiceLevel).toFixed(2)}
+							</p>
+						</div>
+						<div className="bg-slate-50 border border-slate-100 rounded-lg px-3 py-2.5">
+							<p className="text-xs text-slate-500">Safety Stock</p>
+							<p className="font-bold text-slate-700">
+								{simResult?.safetyStock?.toFixed(1) ?? "0.0"}
+							</p>
+						</div>
+						<div className="bg-slate-50 border border-slate-100 rounded-lg px-3 py-2.5">
+							<p className="text-xs text-slate-500">Reorder Point</p>
+							<p className="font-bold text-slate-700">
+								{simResult?.reorderPoint?.toFixed(1) ?? "0.0"}
+							</p>
+						</div>
+						<div className="bg-slate-50 border border-slate-100 rounded-lg px-3 py-2.5">
+							<p className="text-xs text-slate-500">Stockout Risk</p>
+							<p className="font-bold text-slate-700">
+								{((simResult?.stockoutRisk ?? 0) * 100).toFixed(1)}%
+							</p>
+						</div>
+						<div className="bg-slate-50 border border-slate-100 rounded-lg px-3 py-2.5">
+							<p className="text-xs text-slate-500">Holding Cost</p>
+							<p className="font-bold text-slate-700">
+								{formatINR(simResult?.holdingCost ?? 0)}
+							</p>
+						</div>
+						<div className="bg-slate-50 border border-slate-100 rounded-lg px-3 py-2.5">
+							<p className="text-xs text-slate-500">Logistics Cost</p>
+							<p className="font-bold text-slate-700">
+								{formatINR(simResult?.logisticsCost ?? 0)}
+							</p>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -634,7 +805,7 @@ export default function SKUDetailPage({
 				<h3 className="font-semibold text-slate-800 mb-2">
 					Inventory Planning Snapshot
 				</h3>
-				<div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+				<div className="grid grid-cols-2 sm:grid-cols-6 gap-4">
 					<div className="border border-slate-200 rounded-xl p-4">
 						<div className="flex items-center gap-2 mb-2">
 							<Package size={14} className="text-slate-400" />
@@ -667,6 +838,30 @@ export default function SKUDetailPage({
 						</div>
 						<p className="text-2xl font-bold text-slate-800">
 							{activeListingRow?.computed.daysToStockout ?? 999}
+						</p>
+					</div>
+					<div className="border border-slate-200 rounded-xl p-4">
+						<div className="flex items-center gap-2 mb-2">
+							<Zap size={14} className="text-slate-400" />
+							<span className="text-xs text-slate-500">
+								Service Level
+							</span>
+						</div>
+						<p className="text-2xl font-bold text-slate-800">
+							{activeListingRow?.computed.serviceLevel?.toFixed(2) ??
+								"0.95"}
+						</p>
+					</div>
+					<div className="border border-slate-200 rounded-xl p-4">
+						<div className="flex items-center gap-2 mb-2">
+							<Package size={14} className="text-slate-400" />
+							<span className="text-xs text-slate-500">
+								Safety Stock
+							</span>
+						</div>
+						<p className="text-2xl font-bold text-slate-800">
+							{activeListingRow?.computed.safetyStock?.toFixed(1) ??
+								"0.0"}
 						</p>
 					</div>
 					<div className="border border-blue-200 bg-blue-50 rounded-xl p-4">

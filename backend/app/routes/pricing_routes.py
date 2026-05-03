@@ -47,4 +47,5 @@ async def simulate_pricing_scenario(
         price=payload.price,
         competitor_price=payload.competitorPrice,
         festival_boost=payload.festivalBoost,
+        service_level=payload.serviceLevel,
     )
